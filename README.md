@@ -165,5 +165,5 @@ docker push qiusheng26/qiu-pay:latest
 如果觉得项目对你有帮助，欢迎赞赏支持
 
 <div align="center">
-  <img src="docs/public/0.jpg" width="300" />
+  <img src="https://raw.githubusercontent.com/leoxie2006/qiu-pay/main/docs/public/0.jpg" width="300" />
 </div>

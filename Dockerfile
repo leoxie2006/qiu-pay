@@ -34,11 +34,9 @@ COPY --from=frontend-builder /build/app/static/spa ./app/static/spa
 # 创建数据目录和上传目录
 RUN mkdir -p data app/static/uploads
 
-# 环境变量默认值
+# 环境变量默认值（敏感配置通过 .env 或运行时注入）
 ENV DB_PATH=data/qiupay.db \
-    JWT_SECRET=change-me-to-a-random-secret-key \
     ADMIN_USERNAME=admin \
-    ADMIN_PASSWORD=admin123 \
     BACKEND_HOST=0.0.0.0 \
     BACKEND_PORT=8000
 
@@ -46,4 +44,4 @@ EXPOSE ${BACKEND_PORT}
 
 VOLUME ["/app/data"]
 
-CMD uvicorn app.main:app --host ${BACKEND_HOST} --port ${BACKEND_PORT}
+CMD ["sh", "-c", "uvicorn app.main:app --host ${BACKEND_HOST} --port ${BACKEND_PORT}"]
