@@ -1,18 +1,36 @@
-# Qiu-Pay
+<div align="center">
 
-Qiu-Pay 是一个支付宝账单检测平台，支持商户管理、订单管理、异步回调通知等功能。
+<h1>💰 Qiu-Pay</h1>
 
-## 功能特性
+<p>支付宝收款中间平台，通过账单检测自动确认支付</p>
 
-- 支付宝账单检测，自动确认支付状态
-- 多商户管理，独立凭证和密钥
-- 订单金额尾数自动调整，避免同金额冲突
-- 异步回调通知，支持自动重试（最多 5 次）
-- 管理后台：仪表盘、商户管理、订单管理、系统设置、使用文档
+[![license](https://img.shields.io/github/license/leoxie2006/qiu-pay)](LICENSE.md)
+[![release](https://img.shields.io/github/v/release/leoxie2006/qiu-pay)](https://github.com/leoxie2006/qiu-pay/releases)
+[![docker](https://img.shields.io/docker/pulls/qiusheng26/qiu-pay)](https://hub.docker.com/r/qiusheng26/qiu-pay)
+[![stars](https://img.shields.io/github/stars/leoxie2006/qiu-pay)](https://github.com/leoxie2006/qiu-pay)
+[![issues](https://img.shields.io/github/issues/leoxie2006/qiu-pay)](https://github.com/leoxie2006/qiu-pay/issues)
 
-## 部署安装
+</div>
 
-### Docker 部署（推荐）
+---
+
+## ✨ 功能特性
+
+- 🔍 支付宝账单检测，自动确认支付状态
+- 👥 多商户管理，独立凭证和密钥
+- 💲 订单金额尾数自动调整，避免同金额冲突
+- 🔔 异步回调通知，支持自动重试（最多 5 次）
+- 📊 管理后台：仪表盘、商户管理、订单管理、系统设置、使用文档
+
+## 🛠 技术栈
+
+| 层级 | 技术 |
+|------|------|
+| 后端 | Python / FastAPI / SQLite |
+| 前端 | Vue 3 / Element Plus / TypeScript |
+| 部署 | Docker / Docker Compose |
+
+## 🚀 Docker 部署（推荐）
 
 1. 创建项目目录：
 
@@ -40,7 +58,7 @@ BACKEND_PORT=8000
 ```yaml
 services:
   qiupay:
-    image: qiusheng26/qiupay:latest
+    image: qiusheng26/qiu-pay:latest
     container_name: qiupay
     restart: unless-stopped
     ports:
@@ -59,12 +77,12 @@ docker compose up -d
 
 5. 访问 `http://你的服务器IP:8000` 进入管理后台。
 
-### 开发部署
+## 🔧 开发部署
 
 1. 克隆项目：
 
 ```bash
-git clone https://github.com/qiusheng26/qiupay.git
+git clone https://github.com/leoxie2006/qiu-pay.git
 cd qiupay
 ```
 
@@ -109,11 +127,11 @@ pytest
 ### 构建 Docker 镜像
 
 ```bash
-docker build -t qiusheng26/qiupay:latest .
-docker push qiusheng26/qiupay:latest
+docker build -t qiusheng26/qiu-pay:latest .
+docker push qiusheng26/qiu-pay:latest
 ```
 
-### 环境变量说明
+## ⚙️ 环境变量
 
 | 变量 | 默认值 | 说明 |
 |------|--------|------|
@@ -128,22 +146,24 @@ docker push qiusheng26/qiupay:latest
 | FRONTEND_HOST | localhost | 前端开发服务器地址 |
 | FRONTEND_PORT | 5173 | 前端开发服务器端口 |
 
-## 快速开始
+## 📖 快速开始
 
 1. 使用管理员账号登录后台
-2. 在「系统设置」或「商户管理 → 凭证配置」中配置支付宝凭证
+2. 在「商户管理 → 凭证配置」中配置支付宝凭证
 3. 上传商家收款二维码
 4. 创建商户，获取商户 ID（pid）和密钥（key）
 5. 商户通过 API 发起支付请求
 
 详细操作步骤请查看管理后台的「使用文档」页面。
 
-## 技术栈
+## 📄 许可证
 
-- 后端：Python / FastAPI / SQLite
-- 前端：Vue 3 / Element Plus / TypeScript
-- 部署：Docker
+[MIT License](LICENSE.md)
 
-## 许可证
+## ☕ 赞赏支持
 
-MIT
+如果觉得项目对你有帮助，欢迎赞赏支持
+
+<div align="center">
+  <img src="docs/public/0.jpg" width="300" />
+</div>

@@ -1,7 +1,7 @@
 services:
-  qiupay:
-    image: qiusheng26/qiupay:latest
-    container_name: qiupay
+  qiu-pay:
+    image: qiusheng26/qiu-pay:latest
+    container_name: qiu-pay
     restart: unless-stopped
     ports:
       - "${BACKEND_PORT:-8000}:${BACKEND_PORT:-8000}"
