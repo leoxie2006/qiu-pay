@@ -4,7 +4,7 @@
 
 <p>支付宝收款中间平台，通过账单检测自动确认支付</p>
 
-[![license](https://img.shields.io/github/license/leoxie2006/qiu-pay)](LICENSE.md)
+[![license](https://img.shields.io/github/license/leoxie2006/qiu-pay)](https://github.com/leoxie2006/qiu-pay/blob/main/LICENSE.md)
 [![release](https://img.shields.io/github/v/release/leoxie2006/qiu-pay)](https://github.com/leoxie2006/qiu-pay/releases)
 [![docker](https://img.shields.io/docker/pulls/qiusheng26/qiu-pay)](https://hub.docker.com/r/qiusheng26/qiu-pay)
 [![stars](https://img.shields.io/github/stars/leoxie2006/qiu-pay)](https://github.com/leoxie2006/qiu-pay)
@@ -158,7 +158,7 @@ docker push qiusheng26/qiu-pay:latest
 
 ## 📄 许可证
 
-[MIT License](LICENSE.md)
+[MIT License](https://github.com/leoxie2006/qiu-pay/blob/main/LICENSE.md)
 
 ## ☕ 赞赏支持
 
