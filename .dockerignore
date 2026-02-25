@@ -1,0 +1,12 @@
+.git
+.kiro
+.vscode
+.pytest_cache
+__pycache__
+*.pyc
+*.db
+data/
+tests/
+frontend/node_modules
+frontend/dist
+.env

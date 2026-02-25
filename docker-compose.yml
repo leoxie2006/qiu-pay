@@ -1,0 +1,11 @@
+services:
+  qiupay:
+    image: qiusheng26/qiupay:latest
+    container_name: qiupay
+    restart: unless-stopped
+    ports:
+      - "${BACKEND_PORT:-8000}:${BACKEND_PORT:-8000}"
+    volumes:
+      - ./data:/app/data
+    env_file:
+      - .env

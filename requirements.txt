@@ -1,0 +1,14 @@
+fastapi
+uvicorn
+python-multipart
+pyzbar
+pillow
+httpx
+pycryptodome
+python-jose[cryptography]
+bcrypt
+aiofiles
+hypothesis
+pytest
+pytest-asyncio
+python-dotenv
