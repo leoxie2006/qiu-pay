@@ -13,24 +13,30 @@
     </div>
 
     <!-- Payment Content -->
-    <div v-else-if="data" class="pay-card">
+    <div v-else-if="data" class="pay-card acc-bg-white">
+      <div class="card-header acc-bg-slate">
+        <h2 style="color: #000;">支付</h2>
+      </div>
+      
       <!-- 支付成功 -->
       <template v-if="status === 1">
-        <div class="status-icon success-icon">✓</div>
+        <div class="status-icon success-icon acc-bg-teal" style="color: #000; border-color: #000;">✓</div>
         <p class="status-text success-text">支付成功</p>
         <p class="redirect-hint" v-if="data.return_url">3 秒后自动跳转...</p>
       </template>
 
       <!-- 订单已超时 -->
       <template v-else-if="status === 2">
-        <div class="status-icon timeout-icon">!</div>
+        <div class="status-icon timeout-icon acc-bg-white">!</div>
         <p class="status-text timeout-text">订单已超时</p>
       </template>
 
       <!-- 待支付 -->
       <template v-else>
-        <h2 class="order-name">{{ data.order.name }}</h2>
-        <p class="order-amount">¥ {{ data.order.money }}</p>
+        <div class="order-details-box">
+          <p class="order-name">{{ data.order.name }}</p>
+          <p class="order-amount">¥ {{ data.order.money }}</p>
+        </div>
         <img
           v-if="data.qrcode_url"
           :src="data.qrcode_url"
@@ -38,10 +44,12 @@
           class="qrcode-img"
         />
         <div class="waiting">
-          <div class="spinner small"></div>
+          <div class="spinner small" style="border-top-color: #64748b;"></div>
           <span>等待支付中...</span>
         </div>
-        <p class="order-no">订单号: {{ data.order.trade_no }}</p>
+        <div class="order-no-box acc-bg-sky">
+          <p class="order-no" style="color: #000;">订单号: {{ data.order.trade_no }}</p>
+        </div>
       </template>
     </div>
   </div>
@@ -120,139 +128,176 @@ onUnmounted(stopPolling)
   display: flex;
   align-items: center;
   justify-content: center;
-  background: #f5f7fa;
+  background-color: #fff;
+  background-image: radial-gradient(#000 1px, transparent 1px);
+  background-size: 20px 20px;
   padding: 20px;
+  font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
 }
 
 .pay-card {
   background: #fff;
-  border-radius: 12px;
-  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
-  padding: 40px 32px;
+  border: 4px solid #000;
+  box-shadow: 16px 16px 0 0 #cbd5e1;
+  padding: 0;
   text-align: center;
-  max-width: 400px;
+  max-width: 420px;
   width: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.card-header {
+  background: #f1f5f9;
+  color: #000;
+  padding: 20px;
+  border-bottom: 4px solid #000;
+}
+
+.card-header h2 {
+  margin: 0;
+  font-size: 24px;
+  font-weight: 900;
+  letter-spacing: 2px;
+}
+
+.order-details-box {
+  padding: 30px;
+  border-bottom: 4px solid #000;
 }
 
 .order-name {
   font-size: 18px;
-  color: #333;
+  color: #000;
   margin: 0 0 12px;
-  font-weight: 500;
+  font-weight: 900;
+  text-transform: uppercase;
 }
 
 .order-amount {
-  font-size: 32px;
-  color: #e6a23c;
-  font-weight: 700;
-  margin: 0 0 24px;
+  font-size: 48px;
+  color: #000;
+  font-weight: 900;
+  margin: 0;
+  letter-spacing: -2px;
 }
 
 .qrcode-img {
-  width: 220px;
-  height: 220px;
+  width: 240px;
+  height: 240px;
   object-fit: contain;
-  border: 1px solid #eee;
-  border-radius: 8px;
-  margin-bottom: 20px;
+  border: 4px solid #000;
+  box-shadow: 6px 6px 0 0 #cbd5e1;
+  margin: 30px auto 20px;
+  display: block;
 }
 
 .waiting {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 8px;
-  color: #909399;
+  gap: 12px;
+  color: #000;
   font-size: 14px;
-  margin-bottom: 16px;
+  font-weight: 900;
+  margin-bottom: 30px;
+}
+
+.order-no-box {
+  background: #000;
+  padding: 12px;
+  color: #fff;
 }
 
 .order-no {
-  font-size: 12px;
-  color: #c0c4cc;
+  font-size: 14px;
+  font-weight: bold;
   margin: 0;
+  font-family: monospace;
 }
 
 .status-icon {
-  width: 64px;
-  height: 64px;
-  border-radius: 50%;
+  width: 80px;
+  height: 80px;
+  border: 4px solid #000;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 32px;
-  font-weight: 700;
-  margin: 0 auto 16px;
+  font-size: 40px;
+  font-weight: 900;
+  margin: 40px auto 20px;
   color: #fff;
+  box-shadow: 4px 4px 0 0 #cbd5e1;
 }
 
 .success-icon {
-  background: #67c23a;
-}
-
-.timeout-icon {
-  background: #f56c6c;
-}
-
-.error-icon {
-  width: 64px;
-  height: 64px;
-  border-radius: 50%;
-  background: #f56c6c;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 32px;
-  font-weight: 700;
-  margin: 0 auto 16px;
+  background: #000;
   color: #fff;
 }
 
+.timeout-icon {
+  background: #fff;
+  color: #000;
+}
+
+.error-icon {
+  width: 80px;
+  height: 80px;
+  border: 4px solid #000;
+  background: #ef4444;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 40px;
+  font-weight: 900;
+  margin: 40px auto 20px;
+  color: #fff;
+  box-shadow: 8px 8px 0 0 #cbd5e1;
+}
+
 .status-text {
-  font-size: 20px;
-  font-weight: 600;
-  margin: 0 0 8px;
-}
-
-.success-text {
-  color: #67c23a;
-}
-
-.timeout-text {
-  color: #f56c6c;
+  font-size: 24px;
+  font-weight: 900;
+  margin: 0 0 16px;
+  color: #000;
 }
 
 .error-text {
-  color: #f56c6c;
-  font-size: 16px;
+  color: #000;
+  font-size: 18px;
+  font-weight: bold;
+  padding: 0 20px 40px;
 }
 
 .redirect-hint {
-  color: #909399;
-  font-size: 14px;
-  margin: 0;
+  color: #000;
+  font-size: 16px;
+  font-weight: bold;
+  margin: 0 0 40px;
 }
 
 .loading-text {
-  color: #909399;
-  font-size: 14px;
-  margin: 12px 0 0;
+  color: #000;
+  font-size: 16px;
+  font-weight: 900;
+  margin: 20px 0 40px;
+  text-transform: uppercase;
 }
 
 .spinner {
-  width: 40px;
-  height: 40px;
-  border: 3px solid #e4e7ed;
-  border-top-color: #409eff;
+  width: 48px;
+  height: 48px;
+  border: 4px solid #000;
+  border-top-color: transparent;
   border-radius: 50%;
   animation: spin 0.8s linear infinite;
-  margin: 0 auto;
+  margin: 40px auto 0;
 }
 
 .spinner.small {
-  width: 16px;
-  height: 16px;
-  border-width: 2px;
+  width: 20px;
+  height: 20px;
+  border-width: 3px;
   margin: 0;
 }
 

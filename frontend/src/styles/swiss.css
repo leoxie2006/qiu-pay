@@ -1,0 +1,277 @@
+/**
+ * Swiss Brutalism (Style 14) Global Overrides
+ * Applies strict B&W, thick borders, sharp corners, and high-contrast typography
+ * to Element Plus components and standard layout elements.
+ */
+
+:root {
+    /* Override Element Plus CSS Variables with Cool Gray / B&W Tones */
+    --el-color-primary: #000 !important;
+    --el-color-primary-light-3: #333 !important;
+    --el-color-primary-light-5: #666 !important;
+    --el-color-primary-light-7: #999 !important;
+    --el-color-primary-light-8: #ccc !important;
+    --el-color-primary-light-9: #eee !important;
+    --el-color-primary-dark-2: #000 !important;
+
+    /* Semantic muted cool tones */
+    --el-color-success: #10b981 !important;
+    /* Emerald */
+    --el-color-warning: #f59e0b !important;
+    /* Amber */
+    --el-color-danger: #ef4444 !important;
+    /* Red */
+    --el-color-info: #3b82f6 !important;
+    /* Blue */
+
+    --el-text-color-primary: #000 !important;
+    --el-text-color-regular: #000 !important;
+    --el-text-color-secondary: #333 !important;
+    --el-text-color-placeholder: #999 !important;
+
+    --el-border-color: #000 !important;
+    --el-border-color-light: #000 !important;
+    --el-border-color-lighter: #000 !important;
+    --el-border-color-extra-light: #000 !important;
+
+    --el-bg-color: #fff !important;
+    --el-bg-color-page: #fff !important;
+    --el-bg-color-overlay: #fff !important;
+
+    --el-border-radius-base: 0 !important;
+    --el-border-radius-small: 0 !important;
+    --el-border-radius-round: 0 !important;
+    --el-border-radius-circle: 0 !important;
+
+    /* Global Typography */
+    --font-swiss: 'Helvetica Neue', Helvetica, Arial, sans-serif !important;
+}
+
+body {
+    font-family: var(--font-swiss);
+    background-color: #fff;
+    color: #000;
+    -webkit-font-smoothing: antialiased;
+}
+
+/* Base interactive elements */
+.el-button {
+    font-weight: 900 !important;
+    text-transform: uppercase !important;
+    border-width: 2px !important;
+    border-style: solid !important;
+    border-color: #000 !important;
+    background-color: #fff !important;
+    color: #000 !important;
+    box-shadow: 4px 4px 0 0 #cbd5e1 !important;
+    transition: transform 0.1s, box-shadow 0.1s !important;
+}
+
+.el-button:hover,
+.el-button:focus {
+    background-color: #f1f5f9 !important;
+    color: #000 !important;
+    border-color: #000 !important;
+    transform: translate(-2px, -2px) !important;
+    box-shadow: 6px 6px 0 0 #cbd5e1 !important;
+}
+
+.el-button:active {
+    transform: translate(4px, 4px) !important;
+    box-shadow: 0 0 0 0 #000 !important;
+}
+
+.el-button--primary {
+    background-color: #000 !important;
+    color: #fff !important;
+}
+
+.el-button--primary:hover,
+.el-button--primary:focus {
+    background-color: #fff !important;
+    color: #000 !important;
+    outline: 2px solid #000 !important;
+    outline-offset: -2px !important;
+}
+
+.el-button--success {
+    background-color: var(--el-color-success) !important;
+    color: #000 !important;
+}
+
+.el-button--warning {
+    background-color: var(--el-color-warning) !important;
+    color: #000 !important;
+}
+
+.el-button--danger {
+    background-color: var(--el-color-danger) !important;
+    color: #000 !important;
+}
+
+.el-button--danger:hover,
+.el-button--success:hover,
+.el-button--warning:hover {
+    background-color: #000 !important;
+    color: #fff !important;
+}
+
+.el-button.is-link,
+.el-button.is-text {
+    box-shadow: none !important;
+    border: none !important;
+    text-decoration: underline !important;
+    text-underline-offset: 4px !important;
+    text-decoration-thickness: 2px !important;
+}
+
+.el-button.is-link:hover,
+.el-button.is-text:hover {
+    background-color: transparent !important;
+    transform: none !important;
+    color: #000 !important;
+    text-decoration-thickness: 4px !important;
+}
+
+.el-button.is-link:active,
+.el-button.is-text:active {
+    transform: none !important;
+}
+
+/* Cards */
+.el-card {
+    border: 3px solid #000 !important;
+    box-shadow: none !important;
+    /* Will apply custom shadows on specific cards if needed */
+}
+
+/* Forms and Inputs */
+.el-input__wrapper,
+.el-select__wrapper,
+.el-textarea__inner {
+    border: 2px solid #000 !important;
+    box-shadow: none !important;
+    background-color: #fff !important;
+}
+
+.el-input__wrapper.is-focus,
+.el-select__wrapper.is-focused,
+.el-textarea__inner:focus {
+    box-shadow: 4px 4px 0 0 #cbd5e1 !important;
+}
+
+.el-date-editor {
+    --el-input-border-width: 2px;
+    --el-input-border-color: #000;
+}
+
+/* Select Dropdown */
+.el-select-dropdown {
+    border: 2px solid #000 !important;
+    box-shadow: 6px 6px 0 0 #cbd5e1 !important;
+}
+
+/* Table */
+.el-table {
+    border: 2px solid #000 !important;
+    --el-table-border-color: #000 !important;
+    --el-table-header-bg-color: #fff !important;
+    --el-table-row-hover-bg-color: #f0f0f0 !important;
+}
+
+.el-table th.el-table__cell {
+    background-color: #000 !important;
+    color: #fff !important;
+    font-weight: 900 !important;
+    text-transform: uppercase !important;
+    letter-spacing: 1px;
+}
+
+.el-table td.el-table__cell {
+    border-bottom: 2px solid #000 !important;
+    font-weight: 600 !important;
+}
+
+/* Tags */
+.el-tag {
+    border: 2px solid #000 !important;
+    color: #fff !important;
+    font-weight: 900 !important;
+    text-transform: uppercase !important;
+    box-shadow: 2px 2px 0 0 #cbd5e1 !important;
+}
+
+.el-tag--success {
+    background-color: var(--el-color-success) !important;
+}
+
+.el-tag--danger {
+    background-color: var(--el-color-danger) !important;
+}
+
+.el-tag--warning {
+    background-color: var(--el-color-warning) !important;
+}
+
+.el-tag--info {
+    background-color: var(--el-color-info) !important;
+}
+
+/* Pagination */
+.el-pagination {
+    font-weight: 900 !important;
+}
+
+.el-pagination.is-background .el-pager li:not(.is-disabled).is-active {
+    background-color: var(--el-color-primary) !important;
+    color: #000 !important;
+    border: 2px solid #000 !important;
+}
+
+/* Dialogs / MessageBoxes */
+.el-message-box,
+.el-dialog {
+    border: 4px solid #000 !important;
+    box-shadow: 12px 12px 0 0 #cbd5e1 !important;
+    background-color: #fff !important;
+}
+
+/* Utilities */
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+    font-weight: 900;
+    letter-spacing: -0.5px;
+}
+
+/* Cool Tone Accents (Muted/Icy) */
+.acc-bg-indigo {
+    background-color: #e0e7ff !important;
+}
+
+.acc-bg-sky {
+    background-color: #e0f2fe !important;
+}
+
+.acc-bg-slate {
+    background-color: #f1f5f9 !important;
+}
+
+.acc-bg-teal {
+    background-color: #ccfbf1 !important;
+}
+
+.acc-bg-violet {
+    background-color: #ede9fe !important;
+}
+
+.acc-bg-gray {
+    background-color: #f3f4f6 !important;
+}
+
+.acc-bg-white {
+    background-color: #ffffff !important;
+}

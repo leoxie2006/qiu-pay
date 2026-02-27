@@ -18,29 +18,30 @@
         value-format="YYYY-MM-DD"
         @change="onDateChange"
       />
-      <el-button type="primary" @click="handleSearch">搜索</el-button>
+      <el-button style="background-color: #000; color: #fff;" @click="handleSearch">搜索</el-button>
       <el-button @click="exportCSV">导出 CSV</el-button>
     </div>
 
     <!-- 订单表格 -->
-    <el-table :data="orders" stripe style="width: 100%" @row-click="(row: OrderBrief) => viewDetail(row.trade_no)">
-      <el-table-column prop="trade_no" label="订单号" min-width="180" />
-      <el-table-column prop="out_trade_no" label="外部订单号" min-width="180" />
-      <el-table-column prop="merchant_id" label="商户ID" width="80" />
-      <el-table-column prop="type" label="类型" width="80" />
-      <el-table-column prop="name" label="商品名" min-width="120" />
-      <el-table-column prop="money" label="金额" width="100">
-        <template #default="{ row }">¥{{ row.money }}</template>
-      </el-table-column>
-      <el-table-column label="状态" width="90">
-        <template #default="{ row }">
-          <el-tag :type="statusTagType(row.status)" size="small">
-            {{ STATUS_MAP[row.status] || '未知' }}
-          </el-tag>
-        </template>
-      </el-table-column>
-      <el-table-column prop="created_at" label="创建时间" min-width="160" />
-      <el-table-column label="操作" width="160" fixed="right">
+    <el-card shadow="never" class="brutalist-card table-card">
+      <el-table :data="orders" stripe style="width: 100%" @row-click="(row: OrderBrief) => viewDetail(row.trade_no)">
+        <el-table-column prop="trade_no" label="订单号" min-width="180" />
+        <el-table-column prop="out_trade_no" label="外部订单号" min-width="180" />
+        <el-table-column prop="merchant_id" label="商户ID" width="80" />
+        <el-table-column prop="type" label="类型" width="80" />
+        <el-table-column prop="name" label="商品名" min-width="120" />
+        <el-table-column prop="money" label="金额" width="100">
+          <template #default="{ row }">¥{{ row.money }}</template>
+        </el-table-column>
+        <el-table-column label="状态" width="90">
+          <template #default="{ row }">
+            <el-tag :type="statusTagType(row.status)" size="small">
+              {{ STATUS_MAP[row.status] || '未知' }}
+            </el-tag>
+          </template>
+        </el-table-column>
+        <el-table-column prop="created_at" label="创建时间" min-width="160" />
+        <el-table-column label="操作" width="160" fixed="right">
         <template #default="{ row }">
           <el-button
             v-if="row.status === 0"
@@ -58,14 +59,15 @@
           >取消</el-button>
           <el-button
             v-if="row.status === 1"
-            type="primary"
             size="small"
             link
+            style="color: #000;"
             @click.stop="renotifyOrder(row.trade_no)"
           >回调</el-button>
         </template>
       </el-table-column>
-    </el-table>
+      </el-table>
+    </el-card>
 
     <!-- 分页 -->
     <div class="pagination">
@@ -221,14 +223,27 @@ onMounted(() => loadOrders())
 
 .filter-bar {
   display: flex;
-  gap: 12px;
-  margin-bottom: 16px;
+  gap: 16px;
+  margin-bottom: 24px;
   flex-wrap: wrap;
   align-items: center;
+  background-color: #fff;
+  padding: 16px;
+  border: 4px solid #000;
+  box-shadow: 8px 8px 0 0 #cbd5e1;
+}
+
+.brutalist-card {
+  box-shadow: 8px 8px 0 0 #cbd5e1 !important;
+  border: 4px solid #000 !important;
+}
+
+.table-card {
+  padding: 0 !important;
 }
 
 .pagination {
-  margin-top: 16px;
+  margin-top: 24px;
   display: flex;
   justify-content: flex-end;
 }

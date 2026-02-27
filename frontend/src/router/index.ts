@@ -3,6 +3,7 @@ import { createRouter, createWebHistory } from 'vue-router'
 const routes = [
   { path: '/login', name: 'Login', component: () => import('@/views/Login.vue'), meta: { public: true } },
   { path: '/pay/:tradeNo', name: 'Pay', component: () => import('@/views/Pay.vue'), meta: { public: true } },
+  { path: '/demos', name: 'Demos', component: () => import('@/views/Demos.vue'), meta: { public: true } },
   {
     path: '/admin',
     component: () => import('@/layouts/AdminLayout.vue'),

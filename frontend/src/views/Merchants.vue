@@ -1,46 +1,48 @@
 <template>
   <div v-loading="loading" class="merchants">
     <div class="toolbar">
-      <el-button type="primary" @click="showCreateDialog = true">创建商户</el-button>
+      <el-button class="create-btn" style="background-color: #000; color: #fff;" @click="showCreateDialog = true">+ 创建商户</el-button>
     </div>
 
-    <el-table :data="merchants" stripe style="width: 100%">
-      <el-table-column prop="pid" label="PID" width="70" />
-      <el-table-column prop="username" label="用户名" min-width="100" />
-      <el-table-column prop="email" label="邮箱" min-width="160" />
-      <el-table-column label="密钥" min-width="160">
-        <template #default="{ row }">
-          <span style="margin-right: 6px;">{{ row.key.substring(0, 8) }}...</span>
-          <el-button size="small" link @click.stop="copyKey(row.key)">复制</el-button>
-        </template>
-      </el-table-column>
-      <el-table-column label="状态" width="80">
-        <template #default="{ row }">
-          <el-tag :type="row.active ? 'success' : 'danger'" size="small">
-            {{ row.active ? '正常' : '封禁' }}
-          </el-tag>
-        </template>
-      </el-table-column>
-      <el-table-column prop="money" label="余额" width="100">
-        <template #default="{ row }">¥{{ row.money }}</template>
-      </el-table-column>
-      <el-table-column prop="orders" label="总订单" width="80" />
-      <el-table-column prop="order_today" label="今日订单" width="90" />
-      <el-table-column prop="created_at" label="创建时间" min-width="160" />
-      <el-table-column label="操作" width="280" fixed="right">
-        <template #default="{ row }">
-          <el-button
-            :type="row.active ? 'danger' : 'success'"
-            size="small"
-            @click="toggleMerchant(row.pid, row.active ? 0 : 1)"
-          >
-            {{ row.active ? '封禁' : '解封' }}
-          </el-button>
-          <el-button size="small" @click="resetKey(row.pid)">重置密钥</el-button>
-          <el-button type="primary" size="small" @click="openCredentials(row.pid)">凭证配置</el-button>
-        </template>
-      </el-table-column>
-    </el-table>
+    <el-card shadow="never" class="brutalist-card table-card">
+      <el-table :data="merchants" stripe style="width: 100%">
+        <el-table-column prop="pid" label="PID" width="70" />
+        <el-table-column prop="username" label="用户名" min-width="100" />
+        <el-table-column prop="email" label="邮箱" min-width="160" />
+        <el-table-column label="密钥" min-width="160">
+          <template #default="{ row }">
+            <span style="margin-right: 6px;">{{ row.key.substring(0, 8) }}...</span>
+            <el-button size="small" link @click.stop="copyKey(row.key)">复制</el-button>
+          </template>
+        </el-table-column>
+        <el-table-column label="状态" width="80">
+          <template #default="{ row }">
+            <el-tag :type="row.active ? 'success' : 'danger'" size="small">
+              {{ row.active ? '正常' : '封禁' }}
+            </el-tag>
+          </template>
+        </el-table-column>
+        <el-table-column prop="money" label="余额" width="100">
+          <template #default="{ row }">¥{{ row.money }}</template>
+        </el-table-column>
+        <el-table-column prop="orders" label="总订单" width="80" />
+        <el-table-column prop="order_today" label="今日订单" width="90" />
+        <el-table-column prop="created_at" label="创建时间" min-width="160" />
+        <el-table-column label="操作" width="280" fixed="right">
+          <template #default="{ row }">
+            <el-button
+              :type="row.active ? 'danger' : 'success'"
+              size="small"
+              @click="toggleMerchant(row.pid, row.active ? 0 : 1)"
+            >
+              {{ row.active ? '封禁' : '解封' }}
+            </el-button>
+            <el-button size="small" @click="resetKey(row.pid)">重置</el-button>
+            <el-button size="small" style="background-color: #000; color: #fff;" @click="openCredentials(row.pid)">凭证</el-button>
+          </template>
+        </el-table-column>
+      </el-table>
+    </el-card>
 
     <!-- 创建商户对话框 -->
     <el-dialog v-model="showCreateDialog" title="创建商户" width="420px">
@@ -54,7 +56,7 @@
       </el-form>
       <template #footer>
         <el-button @click="showCreateDialog = false">取消</el-button>
-        <el-button type="primary" @click="createMerchant">确定</el-button>
+        <el-button style="background-color: #000; color: #fff;" @click="createMerchant">确定</el-button>
       </template>
     </el-dialog>
 
@@ -131,7 +133,7 @@
           <el-input v-model="credForm.private_key" type="textarea" :rows="3" placeholder="应用私钥" />
         </el-form-item>
         <el-form-item>
-          <el-button type="primary" :loading="credSaving" @click="saveCredential">保存</el-button>
+          <el-button style="background-color: #000; color: #fff;" :loading="credSaving" @click="saveCredential">保存</el-button>
         </el-form-item>
       </el-form>
     </el-dialog>
@@ -325,6 +327,21 @@ onMounted(loadMerchants)
 }
 
 .toolbar {
-  margin-bottom: 16px;
+  margin-bottom: 24px;
+}
+
+.create-btn {
+  font-size: 16px !important;
+  padding: 12px 24px !important;
+  height: auto !important;
+}
+
+.brutalist-card {
+  box-shadow: 8px 8px 0 0 #cbd5e1 !important;
+  border: 4px solid #000 !important;
+}
+
+.table-card {
+  padding: 0 !important;
 }
 </style>

@@ -1,11 +1,11 @@
 <template>
   <div v-loading="loading" class="settings">
     <!-- 密码修改 -->
-    <el-card class="section-card">
+    <el-card shadow="never" class="section-card brutalist-card acc-bg-slate">
       <template #header>
-        <span>密码修改</span>
+        <div class="card-header-title acc-bg-white" style="display:inline-block; padding: 4px 12px; border: 2px solid #000;">密码修改</div>
       </template>
-      <el-form :model="passwordForm" label-width="100px">
+      <el-form :model="passwordForm" label-width="120px" class="brutalist-form acc-bg-white" style="padding: 20px; border: 2px solid #000; box-shadow: 4px 4px 0 0 #cbd5e1;">
         <el-form-item label="原密码">
           <el-input v-model="passwordForm.old_password" type="password" show-password placeholder="请输入原密码" />
         </el-form-item>
@@ -16,7 +16,7 @@
           <el-input v-model="passwordForm.confirm_password" type="password" show-password placeholder="请再次输入新密码" />
         </el-form-item>
         <el-form-item>
-          <el-button type="primary" :loading="passwordSaving" @click="changePassword">修改密码</el-button>
+          <el-button class="action-btn" :loading="passwordSaving" @click="changePassword">修改密码</el-button>
         </el-form-item>
       </el-form>
     </el-card>
@@ -62,9 +62,37 @@ async function changePassword() {
 <style scoped>
 .settings {
   min-height: 200px;
+  max-width: 600px;
 }
 
 .section-card {
-  margin-bottom: 20px;
+  margin-bottom: 24px;
+}
+
+.brutalist-card {
+  border: 4px solid #000 !important;
+  box-shadow: 8px 8px 0 0 #cbd5e1 !important;
+}
+
+.card-header-title {
+  font-weight: 900;
+  font-size: 18px;
+  letter-spacing: 1px;
+}
+
+.brutalist-form {
+  margin-top: 10px;
+}
+
+:deep(.el-form-item__label) {
+  font-weight: 900;
+  color: #000;
+}
+
+.action-btn {
+  margin-top: 10px;
+  font-size: 16px !important;
+  padding: 12px 24px !important;
+  height: auto !important;
 }
 </style>
