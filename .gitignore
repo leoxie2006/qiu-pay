@@ -29,3 +29,7 @@ frontend/node_modules/
 
 # Docker
 data/
+qiupay-docker/
+
+# 依赖
+node_modules/

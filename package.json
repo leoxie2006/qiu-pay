@@ -1,0 +1,10 @@
+{
+  "name": "qiupay",
+  "private": true,
+  "scripts": {
+    "dev": "concurrently -n backend,frontend -c blue,green \"python -m uvicorn app.main:app --host localhost --port 8000 --reload\" \"npm run dev --prefix frontend -- --open\""
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.2"
+  }
+}
