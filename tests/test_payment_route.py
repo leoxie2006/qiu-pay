@@ -32,6 +32,7 @@ def _setup_db():
         DROP TABLE IF EXISTS callback_logs;
         DROP TABLE IF EXISTS balance_logs;
         DROP TABLE IF EXISTS orders;
+        DROP TABLE IF EXISTS merchant_credentials;
         DROP TABLE IF EXISTS merchants;
         DROP TABLE IF EXISTS system_config;
         DROP TABLE IF EXISTS admin;
@@ -52,14 +53,30 @@ def merchant():
 
 
 def _setup_platform_config():
-    """配置平台收款码和凭证。"""
-    from app.services.platform_config import set_config, _encrypt
-    set_config("qrcode_url", "https://qr.alipay.com/fkxtest123")
-    set_config("qrcode_path", "/tmp/test_qr.png")
-    set_config("alipay_app_id", _encrypt("test_app_id"))
-    set_config("alipay_public_key", _encrypt("test_public_key"))
-    set_config("alipay_private_key", _encrypt("test_private_key"))
-    set_config("credential_status", "verified")
+    """配置平台收款码和凭证（已弃用，保留为空操作）。"""
+    pass
+
+
+def _setup_merchant_credentials(merchant_id: int):
+    """为商户配置收款码和凭证。"""
+    from datetime import datetime
+    from app.services.platform_config import _encrypt
+    now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    db = get_db()
+    try:
+        db.execute(
+            """INSERT INTO merchant_credentials
+               (merchant_id, qrcode_path, qrcode_url, app_id,
+                public_key, private_key, credential_status,
+                active, created_at, updated_at)
+               VALUES (?, ?, ?, ?, ?, ?, ?, 1, ?, ?)""",
+            (merchant_id, "/tmp/test_qr.png", "https://qr.alipay.com/fkxtest123",
+             _encrypt("test_app_id"), _encrypt("test_public_key"),
+             _encrypt("test_private_key"), "verified", now, now),
+        )
+        db.commit()
+    finally:
+        db.close()
 
 
 def _build_signed_form(merchant, **overrides):
@@ -157,7 +174,7 @@ class TestSuccessfulOrder:
     @patch("app.services.alipay_client.AlipayClient")
     def test_create_order_pc(self, mock_client_cls, client, merchant):
         """PC 设备应返回 qrcode。"""
-        _setup_platform_config()
+        _setup_merchant_credentials(merchant.id)
         mock_instance = MagicMock()
         mock_instance.query_balance.return_value = {
             "available_amount": Decimal("1000.00"),
@@ -176,7 +193,7 @@ class TestSuccessfulOrder:
     @patch("app.services.alipay_client.AlipayClient")
     def test_create_order_mobile(self, mock_client_cls, client, merchant):
         """Mobile 设备也应返回 qrcode。"""
-        _setup_platform_config()
+        _setup_merchant_credentials(merchant.id)
         mock_instance = MagicMock()
         mock_instance.query_balance.return_value = {
             "available_amount": Decimal("1000.00"),
@@ -193,7 +210,7 @@ class TestSuccessfulOrder:
     @patch("app.services.alipay_client.AlipayClient")
     def test_response_has_all_fields(self, mock_client_cls, client, merchant):
         """响应应包含所有必要字段。"""
-        _setup_platform_config()
+        _setup_merchant_credentials(merchant.id)
         mock_instance = MagicMock()
         mock_instance.query_balance.return_value = {
             "available_amount": Decimal("1000.00"),
@@ -211,7 +228,7 @@ class TestSuccessfulOrder:
 
 
 class TestPlatformConfigErrors:
-    """平台配置缺失测试。"""
+    """商户凭证配置缺失测试。"""
 
     def test_no_config_at_all(self, client, merchant):
         """未配置任何收款码和凭证应返回错误。"""
@@ -222,12 +239,8 @@ class TestPlatformConfigErrors:
         assert data["code"] == -1
         assert "凭证" in data["msg"]
 
-    def test_no_credentials_config(self, client, merchant):
-        """未配置凭证应返回错误。"""
-        from app.services.platform_config import set_config
-        set_config("qrcode_url", "https://qr.alipay.com/fkxtest")
-        set_config("qrcode_path", "/tmp/qr.png")
-
+    def test_no_merchant_credentials(self, client, merchant):
+        """商户未配置凭证应返回错误。"""
         form = _build_signed_form(merchant)
         resp = client.post("/xpay/epay/mapi.php", data=form)
         data = resp.json()
@@ -344,10 +357,28 @@ class TestPayPage:
 
     def test_pending_order_returns_json(self, client, merchant):
         """待支付订单返回包含 order、qrcode_url、return_url 的 JSON。"""
-        from app.services.platform_config import set_config
-        set_config("qrcode_url", "https://qr.alipay.com/fkxtest123")
+        _setup_merchant_credentials(merchant.id)
 
-        _insert_order_directly(merchant.id, "T_PAY_PENDING", money="10.50", status=0)
+        # 插入订单并关联凭证
+        db = get_db()
+        try:
+            cred_row = db.execute(
+                "SELECT id FROM merchant_credentials WHERE merchant_id = ? LIMIT 1",
+                (merchant.id,),
+            ).fetchone()
+            cred_id = cred_row["id"] if cred_row else None
+            db.execute(
+                """INSERT INTO orders
+                   (trade_no, out_trade_no, merchant_id, type, name,
+                    original_money, money, base_balance, status, credential_id, created_at)
+                   VALUES (?, ?, ?, 'alipay', '测试商品', ?, ?, ?, ?, ?, datetime('now'))""",
+                ("T_PAY_PENDING", "OT_T_PAY_PENDING", merchant.id, "10.50", "10.50",
+                 "1000.00", 0, cred_id),
+            )
+            db.commit()
+        finally:
+            db.close()
+
         resp = client.get("/v1/pay/T_PAY_PENDING")
 
         assert resp.status_code == 200

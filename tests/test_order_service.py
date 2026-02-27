@@ -35,6 +35,7 @@ def _setup_db():
         DROP TABLE IF EXISTS callback_logs;
         DROP TABLE IF EXISTS balance_logs;
         DROP TABLE IF EXISTS orders;
+        DROP TABLE IF EXISTS merchant_credentials;
         DROP TABLE IF EXISTS merchants;
         DROP TABLE IF EXISTS system_config;
         DROP TABLE IF EXISTS admin;
@@ -63,14 +64,30 @@ def dummy_merchant():
 
 
 def _setup_platform_config():
-    """配置平台收款码和凭证（模拟已配置状态）。"""
-    from app.services.platform_config import set_config, _encrypt
-    set_config("qrcode_url", "https://qr.alipay.com/fkxtest123")
-    set_config("qrcode_path", "/tmp/test_qr.png")
-    set_config("alipay_app_id", _encrypt("test_app_id"))
-    set_config("alipay_public_key", _encrypt("test_public_key"))
-    set_config("alipay_private_key", _encrypt("test_private_key"))
-    set_config("credential_status", "verified")
+    """配置商户收款码和凭证（模拟已配置状态）。"""
+    # 系统级配置不再使用，凭证只从商户配置中获取
+    pass
+
+
+def _setup_merchant_credentials(merchant_id: int):
+    """为商户配置收款码和凭证。"""
+    from app.services.platform_config import _encrypt
+    now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    db = get_db()
+    try:
+        db.execute(
+            """INSERT INTO merchant_credentials
+               (merchant_id, qrcode_path, qrcode_url, app_id,
+                public_key, private_key, credential_status,
+                active, created_at, updated_at)
+               VALUES (?, ?, ?, ?, ?, ?, ?, 1, ?, ?)""",
+            (merchant_id, "/tmp/test_qr.png", "https://qr.alipay.com/fkxtest123",
+             _encrypt("test_app_id"), _encrypt("test_public_key"),
+             _encrypt("test_private_key"), "verified", now, now),
+        )
+        db.commit()
+    finally:
+        db.close()
 
 
 def _make_order_params(merchant, **overrides):
@@ -220,7 +237,7 @@ class TestCreateOrder:
     @patch("app.services.alipay_client.AlipayClient")
     def test_create_order_success(self, mock_client_cls, svc, merchant):
         """成功创建订单。"""
-        _setup_platform_config()
+        _setup_merchant_credentials(merchant.id)
         mock_instance = MagicMock()
         mock_instance.query_balance.return_value = {
             "available_amount": Decimal("1000.00"),
@@ -243,7 +260,7 @@ class TestCreateOrder:
     @patch("app.services.alipay_client.AlipayClient")
     def test_create_order_persisted(self, mock_client_cls, svc, merchant):
         """订单应持久化到数据库。"""
-        _setup_platform_config()
+        _setup_merchant_credentials(merchant.id)
         mock_instance = MagicMock()
         mock_instance.query_balance.return_value = {
             "available_amount": Decimal("500.00"),
@@ -266,14 +283,12 @@ class TestCreateOrder:
 
     def test_invalid_pid_raises(self, svc):
         """无效商户ID应抛出 OrderCreateError。"""
-        _setup_platform_config()
         params = _make_order_params(MagicMock(id="abc"))
         with pytest.raises(OrderCreateError, match="商户ID无效"):
             svc.create_order(params)
 
     def test_nonexistent_merchant_raises(self, svc):
         """不存在的商户应抛出 OrderCreateError。"""
-        _setup_platform_config()
         params = {"pid": "99999", "type": "alipay", "out_trade_no": "OT1",
                   "name": "item", "money": "10.00"}
         with pytest.raises(OrderCreateError, match="商户不存在"):
@@ -281,7 +296,7 @@ class TestCreateOrder:
 
     def test_banned_merchant_raises(self, svc, merchant):
         """封禁商户应抛出 OrderCreateError。"""
-        _setup_platform_config()
+        _setup_merchant_credentials(merchant.id)
         MerchantService().toggle_status(merchant.id, False)
         params = _make_order_params(merchant)
         with pytest.raises(OrderCreateError, match="封禁"):
@@ -296,11 +311,7 @@ class TestCreateOrder:
 
     def test_no_credentials_raises(self, svc, merchant):
         """未配置凭证应抛出 OrderCreateError。"""
-        from app.services.platform_config import set_config
-        set_config("qrcode_url", "https://qr.alipay.com/fkxtest")
-        set_config("qrcode_path", "/tmp/qr.png")
-        # 不配置凭证
-
+        # 不为商户配置凭证
         params = _make_order_params(merchant)
         with pytest.raises(OrderCreateError, match="凭证"):
             svc.create_order(params)
@@ -308,7 +319,7 @@ class TestCreateOrder:
     @patch("app.services.alipay_client.AlipayClient")
     def test_balance_query_failure_uses_zero(self, mock_client_cls, svc, merchant):
         """余额查询失败时 base_balance 使用 0。"""
-        _setup_platform_config()
+        _setup_merchant_credentials(merchant.id)
         mock_instance = MagicMock()
         mock_instance.query_balance.side_effect = Exception("连接失败")
         mock_client_cls.return_value = mock_instance
@@ -320,7 +331,7 @@ class TestCreateOrder:
     @patch("app.services.alipay_client.AlipayClient")
     def test_create_order_with_optional_params(self, mock_client_cls, svc, merchant):
         """可选参数应正确保存。"""
-        _setup_platform_config()
+        _setup_merchant_credentials(merchant.id)
         mock_instance = MagicMock()
         mock_instance.query_balance.return_value = {"available_amount": Decimal("100")}
         mock_client_cls.return_value = mock_instance
@@ -343,7 +354,7 @@ class TestCreateOrder:
     @patch("app.services.alipay_client.AlipayClient")
     def test_amount_adjustment_applied(self, mock_client_cls, svc, merchant):
         """同金额订单应自动调整尾数。"""
-        _setup_platform_config()
+        _setup_merchant_credentials(merchant.id)
         mock_instance = MagicMock()
         mock_instance.query_balance.return_value = {"available_amount": Decimal("100")}
         mock_client_cls.return_value = mock_instance
@@ -361,7 +372,7 @@ class TestCreateOrder:
 
     def test_invalid_money_raises(self, svc, merchant):
         """无效金额格式应抛出 OrderCreateError。"""
-        _setup_platform_config()
+        _setup_merchant_credentials(merchant.id)
         params = _make_order_params(merchant, money="not_a_number")
         with pytest.raises(OrderCreateError, match="金额"):
             svc.create_order(params)

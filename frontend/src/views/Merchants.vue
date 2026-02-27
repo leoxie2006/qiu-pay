@@ -62,9 +62,6 @@
     <el-dialog v-model="showCredDialog" title="凭证配置（收款码+支付宝凭证）" width="700px">
       <div style="margin-bottom: 16px;">
         <span>商户 PID: {{ credPid }}</span>
-        <span style="margin-left: 12px; color: #909399; font-size: 12px;">
-          未配置时将使用系统默认凭证
-        </span>
       </div>
 
       <!-- 已有凭证列表 -->

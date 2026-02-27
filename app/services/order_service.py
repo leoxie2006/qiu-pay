@@ -10,7 +10,7 @@ from decimal import Decimal
 from app.database import get_db
 from app.models.schemas import Order
 from app.services.merchant_service import MerchantService
-from app.services.platform_config import get_config, get_credentials, get_qrcode_status, resolve_credential_for_merchant
+from app.services.platform_config import resolve_credential_for_merchant
 
 logger = logging.getLogger(__name__)
 
@@ -144,10 +144,10 @@ class OrderService:
 
         merchant_key = row["key"]
 
-        # 2. 解析凭证（商户自有 > 系统配置）
+        # 2. 解析凭证（商户自有配置）
         resolved = resolve_credential_for_merchant(pid_int)
         if not resolved:
-            raise OrderCreateError("商户或平台尚未配置收款码和支付宝凭证")
+            raise OrderCreateError("商户尚未配置收款码和支付宝凭证")
 
         qrcode_url = resolved["qrcode_url"]
         credential_id = resolved.get("credential_id")

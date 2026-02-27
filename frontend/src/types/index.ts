@@ -27,8 +27,6 @@ export interface DashboardData {
 
 export interface PlatformInfo {
   merchant_count: number
-  qrcode_status: string
-  credential_status: string
 }
 
 export interface Merchant {

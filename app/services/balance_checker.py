@@ -15,7 +15,7 @@ from decimal import Decimal
 
 from app.database import get_db
 from app.services.alipay_client import AlipayClient, AlipayClientError
-from app.services.platform_config import get_credentials, get_credential_by_id
+from app.services.platform_config import get_credential_by_id
 
 logger = logging.getLogger(__name__)
 
@@ -30,7 +30,7 @@ class BalanceChecker:
     def _get_alipay_client(self, credential_id: int | None = None) -> AlipayClient:
         """
         获取支付宝客户端实例。
-        如果指定了 credential_id，使用商户凭证；否则使用系统凭证。
+        使用商户凭证（credential_id）获取客户端。
         """
         if credential_id:
             cred = get_credential_by_id(credential_id)
@@ -40,15 +40,7 @@ class BalanceChecker:
                     cred["private_key"],
                     cred["public_key"],
                 )
-        # 回退到系统凭证
-        credentials = get_credentials()
-        if not credentials:
-            raise AlipayClientError("平台尚未配置支付宝凭证")
-        return AlipayClient(
-            credentials["app_id"],
-            credentials["private_key"],
-            credentials["public_key"],
-        )
+        raise AlipayClientError("商户尚未配置支付宝凭证")
 
     def query_balance(self, credential_id: int | None = None) -> Decimal:
         """

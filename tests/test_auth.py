@@ -31,6 +31,7 @@ def _setup_db():
         DROP TABLE IF EXISTS callback_logs;
         DROP TABLE IF EXISTS balance_logs;
         DROP TABLE IF EXISTS orders;
+        DROP TABLE IF EXISTS merchant_credentials;
         DROP TABLE IF EXISTS merchants;
         DROP TABLE IF EXISTS system_config;
         DROP TABLE IF EXISTS admin;
@@ -409,8 +410,6 @@ class TestDashboard:
         data = resp.json()
         platform = data["platform"]
         assert "merchant_count" in platform
-        assert "qrcode_status" in platform
-        assert "credential_status" in platform
 
     def test_dashboard_shows_recent_orders(self, client):
         """仪表盘 JSON 包含最近订单。"""

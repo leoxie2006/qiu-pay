@@ -20,7 +20,7 @@ from app.database import get_db, init_db
 from app.services.alipay_client import AlipayClientError
 from app.services.balance_checker import BalanceChecker
 from app.services.merchant_service import MerchantService
-from app.services.platform_config import set_config, _encrypt
+from app.services.platform_config import _encrypt
 
 
 @pytest.fixture(autouse=True)
@@ -33,28 +33,42 @@ def _setup_db():
         DROP TABLE IF EXISTS callback_logs;
         DROP TABLE IF EXISTS balance_logs;
         DROP TABLE IF EXISTS orders;
+        DROP TABLE IF EXISTS merchant_credentials;
         DROP TABLE IF EXISTS merchants;
         DROP TABLE IF EXISTS system_config;
         DROP TABLE IF EXISTS admin;
     """)
     conn.close()
     init_db()
-    _setup_platform_config()
     yield
 
 
-def _setup_platform_config():
-    """配置平台凭证（模拟已配置状态）。"""
-    set_config("alipay_app_id", _encrypt("test_app_id"))
-    set_config("alipay_public_key", _encrypt("test_public_key"))
-    set_config("alipay_private_key", _encrypt("test_private_key"))
-    set_config("credential_status", "verified")
-
-
 def _create_merchant() -> int:
-    """创建测试商户，返回 pid。"""
+    """创建测试商户并配置凭证，返回 pid。"""
     m = MerchantService().create_merchant("test_shop", "test@example.com")
+    _setup_merchant_credentials(m.id)
     return m.id
+
+
+def _setup_merchant_credentials(merchant_id: int) -> int:
+    """为商户配置凭证，返回 credential_id。"""
+    now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    db = get_db()
+    try:
+        cursor = db.execute(
+            """INSERT INTO merchant_credentials
+               (merchant_id, qrcode_path, qrcode_url, app_id,
+                public_key, private_key, credential_status,
+                active, created_at, updated_at)
+               VALUES (?, ?, ?, ?, ?, ?, ?, 1, ?, ?)""",
+            (merchant_id, "/tmp/test_qr.png", "https://qr.alipay.com/fkxtest123",
+             _encrypt("test_app_id"), _encrypt("test_public_key"),
+             _encrypt("test_private_key"), "verified", now, now),
+        )
+        db.commit()
+        return cursor.lastrowid
+    finally:
+        db.close()
 
 
 def _insert_order(
@@ -64,6 +78,7 @@ def _insert_order(
     base_balance: str,
     status: int = 0,
     created_at: str | None = None,
+    credential_id: int = 1,
 ) -> int:
     """直接插入订单记录，返回 order id。"""
     if created_at is None:
@@ -73,10 +88,10 @@ def _insert_order(
         cursor = db.execute(
             """INSERT INTO orders
                (trade_no, out_trade_no, merchant_id, type, name,
-                original_money, money, base_balance, status, created_at)
-               VALUES (?, ?, ?, 'alipay', '测试商品', ?, ?, ?, ?, ?)""",
+                original_money, money, base_balance, status, credential_id, created_at)
+               VALUES (?, ?, ?, 'alipay', '测试商品', ?, ?, ?, ?, ?, ?)""",
             (trade_no, f"OT_{trade_no}", merchant_id, money, money,
-             base_balance, status, created_at),
+             base_balance, status, credential_id, created_at),
         )
         db.commit()
         return cursor.lastrowid
@@ -126,6 +141,7 @@ class TestQueryBalance:
 
     @patch("app.services.balance_checker.AlipayClient")
     def test_query_balance_success(self, mock_cls):
+        pid = _create_merchant()
         mock_instance = MagicMock()
         mock_instance.query_balance.return_value = {
             "available_amount": Decimal("1000.50"),
@@ -135,11 +151,12 @@ class TestQueryBalance:
         mock_cls.return_value = mock_instance
 
         checker = BalanceChecker()
-        balance = checker.query_balance()
+        balance = checker.query_balance(credential_id=1)
         assert balance == Decimal("1000.50")
 
     @patch("app.services.balance_checker.AlipayClient")
     def test_query_balance_resets_failure_count(self, mock_cls):
+        pid = _create_merchant()
         mock_instance = MagicMock()
         mock_instance.query_balance.return_value = {
             "available_amount": Decimal("500.00"),
@@ -148,22 +165,24 @@ class TestQueryBalance:
 
         checker = BalanceChecker()
         checker._consecutive_failures = 2
-        checker.query_balance()
+        checker.query_balance(credential_id=1)
         assert checker._consecutive_failures == 0
 
     @patch("app.services.balance_checker.AlipayClient")
     def test_query_balance_failure_increments_count(self, mock_cls):
+        pid = _create_merchant()
         mock_instance = MagicMock()
         mock_instance.query_balance.side_effect = AlipayClientError("连接失败")
         mock_cls.return_value = mock_instance
 
         checker = BalanceChecker()
         with pytest.raises(AlipayClientError):
-            checker.query_balance()
+            checker.query_balance(credential_id=1)
         assert checker._consecutive_failures == 1
 
     @patch("app.services.balance_checker.AlipayClient")
     def test_three_consecutive_failures_logs_warning(self, mock_cls, caplog):
+        pid = _create_merchant()
         mock_instance = MagicMock()
         mock_instance.query_balance.side_effect = AlipayClientError("连接失败")
         mock_cls.return_value = mock_instance
@@ -173,7 +192,7 @@ class TestQueryBalance:
         with caplog.at_level(logging.WARNING, logger="app.services.balance_checker"):
             for _ in range(3):
                 with pytest.raises(AlipayClientError):
-                    checker.query_balance()
+                    checker.query_balance(credential_id=1)
 
         assert checker._consecutive_failures == 3
         assert "连续 3 次连接失败" in caplog.text
@@ -614,6 +633,7 @@ class TestConsecutiveFailures:
     @patch("app.services.balance_checker.AlipayClient")
     def test_two_failures_no_warning(self, mock_cls, caplog):
         """连续 2 次失败不触发告警。"""
+        pid = _create_merchant()
         mock_instance = MagicMock()
         mock_instance.query_balance.side_effect = AlipayClientError("连接失败")
         mock_cls.return_value = mock_instance
@@ -623,13 +643,14 @@ class TestConsecutiveFailures:
         with caplog.at_level(logging.WARNING, logger="app.services.balance_checker"):
             for _ in range(2):
                 with pytest.raises(AlipayClientError):
-                    checker.query_balance()
+                    checker.query_balance(credential_id=1)
 
         assert "连续 3 次连接失败" not in caplog.text
 
     @patch("app.services.balance_checker.AlipayClient")
     def test_success_resets_counter(self, mock_cls):
         """成功查询后重置失败计数。"""
+        pid = _create_merchant()
         mock_instance = MagicMock()
         mock_cls.return_value = mock_instance
 
@@ -639,7 +660,7 @@ class TestConsecutiveFailures:
         mock_instance.query_balance.side_effect = AlipayClientError("连接失败")
         for _ in range(2):
             with pytest.raises(AlipayClientError):
-                checker.query_balance()
+                checker.query_balance(credential_id=1)
         assert checker._consecutive_failures == 2
 
         # 成功一次
@@ -647,12 +668,13 @@ class TestConsecutiveFailures:
         mock_instance.query_balance.return_value = {
             "available_amount": Decimal("100.00"),
         }
-        checker.query_balance()
+        checker.query_balance(credential_id=1)
         assert checker._consecutive_failures == 0
 
     @patch("app.services.balance_checker.AlipayClient")
     def test_four_failures_still_warns(self, mock_cls, caplog):
         """连续 4 次失败也触发告警（第 3、4 次都告警）。"""
+        pid = _create_merchant()
         mock_instance = MagicMock()
         mock_instance.query_balance.side_effect = AlipayClientError("连接失败")
         mock_cls.return_value = mock_instance
@@ -662,7 +684,7 @@ class TestConsecutiveFailures:
         with caplog.at_level(logging.WARNING, logger="app.services.balance_checker"):
             for _ in range(4):
                 with pytest.raises(AlipayClientError):
-                    checker.query_balance()
+                    checker.query_balance(credential_id=1)
 
         assert checker._consecutive_failures == 4
         assert "连续" in caplog.text

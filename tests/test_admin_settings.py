@@ -30,6 +30,7 @@ def _setup_db():
         DROP TABLE IF EXISTS callback_logs;
         DROP TABLE IF EXISTS balance_logs;
         DROP TABLE IF EXISTS orders;
+        DROP TABLE IF EXISTS merchant_credentials;
         DROP TABLE IF EXISTS merchants;
         DROP TABLE IF EXISTS system_config;
         DROP TABLE IF EXISTS admin;
@@ -68,45 +69,6 @@ class TestSettingsPage:
         assert "application/json" in resp.headers.get("content-type", "")
         data = resp.json()
         assert data["code"] == 1
-
-    def test_response_contains_qrcode_status(self, client):
-        token = _get_token(client)
-        resp = client.get("/v1/admin/settings", headers={"Authorization": f"Bearer {token}"})
-        data = resp.json()
-        assert "qrcode_status" in data
-        qs = data["qrcode_status"]
-        assert "configured" in qs
-        assert "qrcode_url" in qs
-
-    def test_response_contains_credential_status(self, client):
-        token = _get_token(client)
-        resp = client.get("/v1/admin/settings", headers={"Authorization": f"Bearer {token}"})
-        data = resp.json()
-        assert "credential_status" in data
-        cs = data["credential_status"]
-        assert "status" in cs
-
-    def test_unconfigured_defaults(self, client):
-        """未配置时，qrcode 未配置且凭证为 unconfigured。"""
-        token = _get_token(client)
-        resp = client.get("/v1/admin/settings", headers={"Authorization": f"Bearer {token}"})
-        data = resp.json()
-        assert data["qrcode_status"]["configured"] is False
-        assert data["credential_status"]["status"] == "unconfigured"
-
-    def test_credential_status_includes_app_id_when_configured(self, client):
-        """凭证配置后，credential_status 应包含 app_id。"""
-        token = _get_token(client)
-        # 先配置凭证
-        client.post("/v1/admin/settings/alipay-credentials",
-                     json={"app_id": "2021001234", "public_key": "pubkey123", "private_key": "privkey123"},
-                     headers={"Authorization": f"Bearer {token}"})
-        # 再查询设置
-        resp = client.get("/v1/admin/settings", headers={"Authorization": f"Bearer {token}"})
-        data = resp.json()
-        cs = data["credential_status"]
-        assert "app_id" in cs
-        assert cs["app_id"] == "2021001234"
 
 
 # ── POST /admin/settings/change-password 测试 ──
@@ -152,60 +114,3 @@ class TestChangePassword:
         data = resp.json()
         assert data["code"] == -1
         assert "6" in data["msg"]
-
-
-# ── POST /admin/settings/alipay-credentials 测试 ──
-
-
-class TestAlipayCredentials:
-    """POST /admin/settings/alipay-credentials 路由测试。"""
-
-    def test_save_credentials_success(self, client):
-        token = _get_token(client)
-        resp = client.post("/v1/admin/settings/alipay-credentials",
-                           json={"app_id": "2021001234", "public_key": "pubkey123", "private_key": "privkey123"},
-                           headers={"Authorization": f"Bearer {token}"})
-        data = resp.json()
-        assert data["code"] == 1
-
-    def test_save_credentials_without_token(self, client):
-        resp = client.post("/v1/admin/settings/alipay-credentials",
-                           json={"app_id": "2021001234", "public_key": "pubkey123", "private_key": "privkey123"})
-        assert resp.status_code == 401
-
-    def test_save_empty_credentials_returns_error(self, client):
-        token = _get_token(client)
-        resp = client.post("/v1/admin/settings/alipay-credentials",
-                           json={"app_id": "", "public_key": "pubkey123", "private_key": "privkey123"},
-                           headers={"Authorization": f"Bearer {token}"})
-        data = resp.json()
-        assert data["code"] == -1
-
-
-# ── POST /admin/settings/qrcode 测试 ──
-
-
-class TestQrcodeUpload:
-    """POST /admin/settings/qrcode 路由测试。"""
-
-    def test_upload_without_token(self, client):
-        resp = client.post("/v1/admin/settings/qrcode",
-                           files={"file": ("test.png", b"fakepng", "image/png")})
-        assert resp.status_code == 401
-
-    def test_upload_invalid_file_type(self, client):
-        token = _get_token(client)
-        resp = client.post("/v1/admin/settings/qrcode",
-                           files={"file": ("test.txt", b"not an image", "text/plain")},
-                           headers={"Authorization": f"Bearer {token}"})
-        data = resp.json()
-        assert data["code"] == -1
-        assert "格式" in data["msg"] or "PNG" in data["msg"]
-
-    def test_upload_empty_file(self, client):
-        token = _get_token(client)
-        resp = client.post("/v1/admin/settings/qrcode",
-                           files={"file": ("test.png", b"", "image/png")},
-                           headers={"Authorization": f"Bearer {token}"})
-        data = resp.json()
-        assert data["code"] == -1

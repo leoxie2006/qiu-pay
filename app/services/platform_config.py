@@ -500,7 +500,7 @@ def delete_merchant_credential(credential_id: int) -> None:
 
 def resolve_credential_for_merchant(merchant_id: int) -> dict | None:
     """
-    解析商户应使用的凭证：优先使用商户自己的活跃凭证，否则回退到系统配置。
+    解析商户应使用的凭证：仅使用商户自己的活跃凭证。
 
     Returns:
         dict: {"app_id", "public_key", "private_key", "qrcode_url", "credential_id"} 或 None
@@ -527,16 +527,4 @@ def resolve_credential_for_merchant(merchant_id: int) -> dict | None:
                 "credential_id": cred["id"],
             }
 
-    # 回退到系统配置
-    sys_creds = get_credentials()
-    if not sys_creds:
-        return None
-
-    qrcode_status = get_qrcode_status()
-    return {
-        "app_id": sys_creds["app_id"],
-        "public_key": sys_creds["public_key"],
-        "private_key": sys_creds["private_key"],
-        "qrcode_url": qrcode_status.get("qrcode_url", ""),
-        "credential_id": None,
-    }
+    return None

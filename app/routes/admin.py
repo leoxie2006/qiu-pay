@@ -7,7 +7,7 @@ import io
 import math
 from datetime import date, timedelta
 
-from fastapi import APIRouter, Depends, File, Query, Request, UploadFile
+from fastapi import APIRouter, Depends, Query, Request
 from fastapi.responses import JSONResponse, StreamingResponse
 from pydantic import BaseModel
 
@@ -17,10 +17,6 @@ from app.services.callback_service import CallbackService
 from app.services.merchant_service import MerchantService
 from app.services.platform_config import (
     PlatformConfigError,
-    get_credential_status,
-    get_qrcode_status,
-    save_credentials,
-    upload_qrcode,
     get_merchant_credentials,
     save_merchant_credential,
     toggle_merchant_credential,
@@ -150,23 +146,6 @@ def _render_dashboard(db):
     # 平台状态
     merchant_count = db.execute("SELECT COUNT(*) AS cnt FROM merchants").fetchone()["cnt"]
 
-    qr_row = db.execute(
-        "SELECT config_value FROM system_config WHERE config_key = 'qrcode_url'"
-    ).fetchone()
-    qrcode_status = "已配置" if (qr_row and qr_row["config_value"]) else "未配置"
-
-    cred_row = db.execute(
-        "SELECT config_value FROM system_config WHERE config_key = 'credential_status'"
-    ).fetchone()
-    cred_val = cred_row["config_value"] if cred_row else None
-    credential_map = {
-        "unconfigured": "未配置",
-        "configured": "已配置",
-        "verified": "验证通过",
-        "failed": "验证失败",
-    }
-    credential_status = credential_map.get(cred_val, "未配置")
-
     return JSONResponse(content={
         "code": 1,
         "today_stats": today_stats,
@@ -180,8 +159,6 @@ def _render_dashboard(db):
         "recent_orders": recent_orders,
         "platform": {
             "merchant_count": merchant_count,
-            "qrcode_status": qrcode_status,
-            "credential_status": credential_status,
         },
     })
 
@@ -510,62 +487,11 @@ class ChangePasswordRequest(BaseModel):
     new_password: str
 
 
-class AlipayCredentialsRequest(BaseModel):
-    app_id: str
-    public_key: str
-    private_key: str
-
-
 @router.get("/settings")
 async def settings_page(admin: dict = Depends(get_current_admin)):
-    """系统设置页面：返回收款码和凭证配置状态 JSON。"""
-    qrcode_status = get_qrcode_status()
-    credential_status = get_credential_status()
+    """系统设置页面：仅返回基本状态 JSON。"""
+    return JSONResponse(content={"code": 1})
 
-    # 如果凭证已配置，附加 app_id（脱敏）
-    if credential_status["status"] != "unconfigured":
-        from app.services.platform_config import get_credentials
-        creds = get_credentials()
-        if creds:
-            credential_status["app_id"] = creds["app_id"]
-
-    return JSONResponse(content={
-        "code": 1,
-        "qrcode_status": qrcode_status,
-        "credential_status": credential_status,
-    })
-
-
-
-@router.post("/settings/qrcode")
-async def upload_qrcode_route(
-    file: UploadFile = File(...),
-    admin: dict = Depends(get_current_admin),
-):
-    """上传收款码图片。"""
-    try:
-        content = await file.read()
-        result = upload_qrcode(content, file.filename or "upload.png")
-        return JSONResponse(content={"code": 1, "msg": "收款码上传成功", **result})
-    except PlatformConfigError as e:
-        return JSONResponse(content={"code": -1, "msg": str(e)})
-    except Exception as e:
-        return JSONResponse(content={"code": -1, "msg": f"上传失败: {e}"})
-
-
-@router.post("/settings/alipay-credentials")
-async def save_alipay_credentials_route(
-    body: AlipayCredentialsRequest,
-    admin: dict = Depends(get_current_admin),
-):
-    """配置支付宝应用凭证。"""
-    try:
-        result = save_credentials(body.app_id, body.public_key, body.private_key)
-        return JSONResponse(content={"code": 1, **result})
-    except PlatformConfigError as e:
-        return JSONResponse(content={"code": -1, "msg": str(e)})
-    except Exception as e:
-        return JSONResponse(content={"code": -1, "msg": f"保存失败: {e}"})
 
 
 @router.post("/settings/change-password")

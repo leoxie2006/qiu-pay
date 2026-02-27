@@ -104,18 +104,6 @@
             <div class="stat-value">{{ data.platform.merchant_count }}</div>
           </el-card>
         </el-col>
-        <el-col :span="8">
-          <el-card shadow="hover">
-            <div class="stat-label">收款码状态</div>
-            <div class="stat-value">{{ data.platform.qrcode_status }}</div>
-          </el-card>
-        </el-col>
-        <el-col :span="8">
-          <el-card shadow="hover">
-            <div class="stat-label">凭证状态</div>
-            <div class="stat-value">{{ data.platform.credential_status }}</div>
-          </el-card>
-        </el-col>
       </el-row>
     </template>
   </div>

@@ -175,17 +175,13 @@ async def pay_page(trade_no: str):
     except (TypeError, ValueError):
         pass
 
-    # 获取收款码 URL：优先从订单绑定的凭证获取，否则从系统配置获取
+    # 获取收款码 URL：从订单绑定的凭证获取
     qrcode_url = ""
     if order.get("credential_id"):
         from app.services.platform_config import get_credential_by_id
         cred = get_credential_by_id(order["credential_id"])
         if cred:
             qrcode_url = cred.get("qrcode_url", "")
-    if not qrcode_url:
-        from app.services.platform_config import get_qrcode_status
-        qrcode_status = get_qrcode_status()
-        qrcode_url = qrcode_status.get("qrcode_url", "")
 
     # 构建 return_url（已支付时用于前端跳转）
     return_url = ""
