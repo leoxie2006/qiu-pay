@@ -1,8 +1,19 @@
-<div align="center">
+<h1 align="center">💰 Qiu-Pay</h1>
 
-<h1>💰 Qiu-Pay</h1>
+<p align="center">
+无需营业执照的开源支付方案  
+适用于个人开发者 / 小团队 / 独立站
+</p>
 
-<p>支付宝收款中间平台，通过账单检测自动确认支付</p>
+<p align="center">
+🚫 不需要企业资质  
+🚫 不需要签约支付接口  
+🚫 不需要手续费平台
+</p>
+
+<p align="center">
+通过支付宝账单检测实现自动确认支付，Qiu-Pay 不是支付接口，而是支付确认方案。
+</p>
 
 [![license](https://img.shields.io/github/license/leoxie2006/qiu-pay)](https://github.com/leoxie2006/qiu-pay/blob/main/LICENSE.md)
 [![release](https://img.shields.io/github/v/release/leoxie2006/qiu-pay)](https://github.com/leoxie2006/qiu-pay/releases)
@@ -13,6 +24,25 @@
 </div>
 
 ---
+
+## ❓ 为什么不用传统聚合支付？
+
+| 对比项 | 传统聚合支付 | Qiu-Pay |
+|--------|-------------|---------|
+| 需要营业执照 | ✅ 必须 | ❌ 不需要 |
+| 需要签约支付接口 | ✅ | ❌ |
+| 手续费 | 有 | 无 |
+| 适合个人开发者 | ❌ | ✅ |
+| 部署复杂度 | 高 | 低 |
+| 成本 | 高 | 几乎 0 |
+
+## 👨‍💻 适用场景
+
+- 独立开发者收款
+- 小程序收款
+- SaaS 项目内购
+- 个人网站支付
+- 无法申请商户号的项目
 
 ## ✨ 功能特性
 
@@ -29,6 +59,13 @@
 | 后端 | Python / FastAPI / SQLite |
 | 前端 | Vue 3 / Element Plus / TypeScript |
 | 部署 | Docker / Docker Compose |
+
+## ⚡ 5分钟搭建支付系统
+
+1. Docker 启动
+2. 上传收款码
+3. 创建商户
+4. 开始收款
 
 ## 🚀 Docker 部署（推荐）
 
@@ -167,3 +204,9 @@ docker push qiusheng26/qiu-pay:latest
 <div align="center">
   <img src="https://raw.githubusercontent.com/leoxie2006/qiu-pay/main/docs/public/0.jpg" width="300" />
 </div>
+
+## ⚠️ 合规声明
+
+本项目仅用于个人技术研究或收款确认场景，不提供资金清算、代收代付等支付服务。
+
+用户需遵守当地法律法规及支付宝相关协议，因不当使用产生的风险由使用者自行承担。
