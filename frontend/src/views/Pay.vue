@@ -39,7 +39,7 @@
         </div>
         <img
           v-if="data.qrcode_url"
-          :src="data.qrcode_url"
+          :src="generateQRCode(data.qrcode_url)"
           alt="收款码"
           class="qrcode-img"
         />
@@ -73,6 +73,11 @@ const publicApi = axios.create({
   baseURL: import.meta.env.VITE_API_BASE || '',
   timeout: 10000,
 })
+
+function generateQRCode(text: string): string {
+  // 使用在线二维码生成服务将支付宝链接转换为二维码图片
+  return `https://api.qrserver.com/v1/create-qr-code/?size=240x240&data=${encodeURIComponent(text)}`
+}
 
 onMounted(async () => {
   try {
