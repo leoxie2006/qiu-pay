@@ -12,7 +12,7 @@ from fastapi.responses import JSONResponse, StreamingResponse
 from pydantic import BaseModel
 
 from app.database import get_db
-from app.services.auth import authenticate, get_current_admin, hash_password, verify_password
+from app.services.auth import authenticate, get_current_admin, hash_password, verify_password, is_demo_mode
 from app.services.callback_service import CallbackService
 from app.services.merchant_service import MerchantService
 from app.services.platform_config import (
@@ -529,6 +529,9 @@ async def get_settings_config(admin: dict = Depends(get_current_admin)):
 @router.post("/settings/config")
 async def update_settings_config(body: UpdateConfigRequest, admin: dict = Depends(get_current_admin)):
     """保存系统配置。"""
+    if is_demo_mode():
+        return JSONResponse(content={"code": -1, "msg": "Demo 模式下禁止修改系统配置"})
+
     db = get_db()
     try:
         if body.icp_record is not None:
@@ -550,6 +553,9 @@ async def change_password_route(
     admin: dict = Depends(get_current_admin),
 ):
     """修改管理员密码。"""
+    if is_demo_mode():
+        return JSONResponse(content={"code": -1, "msg": "Demo 模式下禁止修改密码"})
+
     username = admin.get("sub")
     if not username:
         return JSONResponse(content={"code": -1, "msg": "无法识别当前用户"})

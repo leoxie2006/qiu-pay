@@ -44,6 +44,16 @@ import { ElMessage } from 'element-plus'
 import api from '@/api'
 
 const loading = ref(false)
+const isDemoMode = ref(false)
+
+async function checkDemoMode() {
+  try {
+    const res = await api.get('/v1/admin/auth/demo-status')
+    isDemoMode.value = res.data.demo_mode
+  } catch {
+    console.error('获取 Demo 状态失败')
+  }
+}
 
 // 系统配置表单
 const configForm = ref({ icp_record: '' })
@@ -64,6 +74,10 @@ async function fetchConfig() {
 }
 
 async function saveConfig() {
+  if (isDemoMode.value) {
+    ElMessage.warning('Demo 模式下禁止修改系统配置')
+    return
+  }
   configSaving.value = true
   try {
     const res = await api.post('/v1/admin/settings/config', {
@@ -86,6 +100,10 @@ const passwordForm = ref({ old_password: '', new_password: '', confirm_password:
 const passwordSaving = ref(false)
 
 async function changePassword() {
+  if (isDemoMode.value) {
+    ElMessage.warning('Demo 模式下禁止修改密码')
+    return
+  }
   if (passwordForm.value.new_password !== passwordForm.value.confirm_password) {
     ElMessage.error('两次输入的密码不一致')
     return
@@ -110,6 +128,7 @@ async function changePassword() {
 }
 
 onMounted(() => {
+  checkDemoMode()
   fetchConfig()
 })
 </script>
