@@ -1,4 +1,8 @@
-<h1 align="center">💰 Qiu-Pay</h1>
+<p align="center">
+  <img src="frontend/src/assets/qiu-pay-logo.png" alt="Qiu-Pay Logo" width="180" />
+</p>
+
+<h1 align="center">Qiu-Pay</h1>
 
 <p align="center">
 无需营业执照的开源支付方案  
@@ -20,8 +24,6 @@
 [![docker](https://img.shields.io/docker/pulls/qiusheng26/qiu-pay)](https://hub.docker.com/r/qiusheng26/qiu-pay)
 [![stars](https://img.shields.io/github/stars/leoxie2006/qiu-pay)](https://github.com/leoxie2006/qiu-pay)
 [![issues](https://img.shields.io/github/issues/leoxie2006/qiu-pay)](https://github.com/leoxie2006/qiu-pay/issues)
-
-</div>
 
 ---
 # Qiu-Pay
@@ -196,6 +198,14 @@ docker push qiusheng26/qiu-pay:latest
 ## 📄 许可证
 
 [MIT License](https://github.com/leoxie2006/qiu-pay/blob/main/LICENSE.md)
+
+## ⭐ Star History
+
+<p align="center">
+  <a href="https://star-history.com/#leoxie2006/qiu-pay&Date">
+    <img src="https://api.star-history.com/svg?repos=leoxie2006/qiu-pay&type=Date" alt="Star History Chart" />
+  </a>
+</p>
 
 ## ☕ 赞赏支持
 

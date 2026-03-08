@@ -1,7 +1,13 @@
 <template>
   <el-container class="admin-layout">
     <el-aside width="240px" class="admin-aside">
-      <div class="logo acc-bg-slate">QIU-PAY // 管理后台</div>
+      <div class="logo acc-bg-slate">
+        <img :src="logoSrc" alt="Qiu-Pay Logo" class="logo-mark">
+        <div class="logo-copy">
+          <strong>QIU-PAY</strong>
+          <span>管理后台</span>
+        </div>
+      </div>
       <el-menu
         :default-active="activeMenu"
         router
@@ -52,6 +58,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { Odometer, User, List, Setting, Document } from '@element-plus/icons-vue'
 import IcpFooter from '@/components/IcpFooter.vue'
+import logoSrc from '@/assets/qiu-pay-logo.png'
 
 const route = useRoute()
 const router = useRouter()
@@ -86,14 +93,42 @@ async function handleLogout() {
 }
 
 .logo {
-  height: 64px;
-  line-height: 64px;
-  text-align: center;
+  min-height: 96px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
   color: #000;
-  font-size: 18px;
+  padding: 14px 16px;
+  border-bottom: 4px solid #000;
+  box-sizing: border-box;
+}
+
+.logo-mark {
+  width: 54px;
+  height: 54px;
+  display: block;
+  flex: 0 0 auto;
+}
+
+.logo-copy {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  line-height: 1.05;
+}
+
+.logo-copy strong {
+  font-size: 20px;
   font-weight: 900;
   letter-spacing: 1px;
-  border-bottom: 4px solid #000;
+}
+
+.logo-copy span {
+  font-size: 12px;
+  font-weight: 900;
+  letter-spacing: 2px;
+  margin-top: 5px;
 }
 
 .brutalist-menu {

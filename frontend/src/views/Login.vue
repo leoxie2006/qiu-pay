@@ -2,6 +2,7 @@
   <div class="login-container">
     <div class="login-card">
       <div class="login-header acc-bg-slate">
+        <img :src="logoSrc" alt="Qiu-Pay Logo" class="login-logo">
         <h2 class="login-title">QIU-PAY 管理后台</h2>
       </div>
       <div class="login-body" style="border-top: 4px solid #000;">
@@ -58,6 +59,7 @@ import { ElMessage } from 'element-plus'
 import type { FormInstance, FormRules } from 'element-plus'
 import { useAuthStore } from '@/stores/auth'
 import IcpFooter from '@/components/IcpFooter.vue'
+import logoSrc from '@/assets/qiu-pay-logo.png'
 
 const router = useRouter()
 const authStore = useAuthStore()
@@ -120,6 +122,16 @@ async function handleLogin() {
 .login-header {
   padding: 24px;
   color: #000;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+}
+
+.login-logo {
+  width: 88px;
+  height: 88px;
+  display: block;
 }
 
 .login-title {
