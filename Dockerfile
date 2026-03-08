@@ -44,4 +44,4 @@ EXPOSE ${BACKEND_PORT}
 
 VOLUME ["/app/data"]
 
-CMD ["sh", "-c", "uvicorn app.main:app --host ${BACKEND_HOST} --port ${BACKEND_PORT}"]
+CMD ["sh", "-c", "exec uvicorn app.main:app --host ${BACKEND_HOST} --port ${BACKEND_PORT}"]
