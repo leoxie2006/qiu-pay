@@ -20,6 +20,20 @@ logger = logging.getLogger(__name__)
 router = APIRouter()
 
 
+@router.get("/v1/system/info")
+async def system_info():
+    """获取系统公开配置信息（如ICP备案）。"""
+    from app.database import get_db
+    db = get_db()
+    try:
+        row = db.execute("SELECT config_value FROM system_config WHERE config_key = 'icp_record'").fetchone()
+        icp_record = row["config_value"] if row else ""
+        return JSONResponse(content={"code": 1, "icp_record": icp_record})
+    finally:
+        db.close()
+
+
+
 def _validate_merchant(pid: Optional[str], key: Optional[str]) -> tuple:
     """
     验证商户 pid 和 key。

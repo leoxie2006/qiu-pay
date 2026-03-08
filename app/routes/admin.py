@@ -47,6 +47,23 @@ async def login(body: LoginRequest):
         return JSONResponse(content={"code": -1, "msg": str(e)})
 
 
+@router.get("/auth/demo-status")
+async def demo_status(request: Request):
+    """
+    获取 demo 模式状态。
+    
+    返回 {demo_mode: bool, ip_allowed: bool, client_ip: str}
+    """
+    from app.services.auth import is_demo_mode, is_ip_allowed
+    
+    client_ip = request.client.host if request.client else "unknown"
+    return JSONResponse(content={
+        "demo_mode": is_demo_mode(),
+        "ip_allowed": is_ip_allowed(client_ip),
+        "client_ip": client_ip,
+    })
+
+
 # ── 仪表盘 ────────────────────────────────────────────────
 
 
@@ -487,10 +504,43 @@ class ChangePasswordRequest(BaseModel):
     new_password: str
 
 
+class UpdateConfigRequest(BaseModel):
+    icp_record: str | None = None
+
+
 @router.get("/settings")
 async def settings_page(admin: dict = Depends(get_current_admin)):
     """系统设置页面：仅返回基本状态 JSON。"""
     return JSONResponse(content={"code": 1})
+
+
+@router.get("/settings/config")
+async def get_settings_config(admin: dict = Depends(get_current_admin)):
+    """获取可编辑的系统配置。"""
+    db = get_db()
+    try:
+        rows = db.execute("SELECT config_key, config_value FROM system_config").fetchall()
+        config = {r["config_key"]: r["config_value"] for r in rows}
+        return JSONResponse(content={"code": 1, "config": config})
+    finally:
+        db.close()
+
+
+@router.post("/settings/config")
+async def update_settings_config(body: UpdateConfigRequest, admin: dict = Depends(get_current_admin)):
+    """保存系统配置。"""
+    db = get_db()
+    try:
+        if body.icp_record is not None:
+            row = db.execute("SELECT id FROM system_config WHERE config_key = 'icp_record'").fetchone()
+            if row:
+                db.execute("UPDATE system_config SET config_value = ?, updated_at = datetime('now') WHERE config_key = 'icp_record'", (body.icp_record,))
+            else:
+                db.execute("INSERT INTO system_config (config_key, config_value) VALUES ('icp_record', ?)", (body.icp_record,))
+        db.commit()
+        return JSONResponse(content={"code": 1, "msg": "系统配置保存成功"})
+    finally:
+        db.close()
 
 
 

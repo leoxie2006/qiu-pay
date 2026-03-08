@@ -160,6 +160,11 @@ if os.environ.get("CORS_ENABLED", "0") == "1":
         allow_headers=["*"],
     )
 
+# ── Demo 模式 IP 白名单中间件 ──────────────────────────────
+
+from app.middleware import DemoIPCheckMiddleware
+app.add_middleware(DemoIPCheckMiddleware)
+
 # ── 路由注册 ──────────────────────────────────────────────
 
 from app.routes.payment import router as payment_router

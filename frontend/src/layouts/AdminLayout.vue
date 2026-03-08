@@ -30,6 +30,9 @@
           <span>使用文档</span>
         </el-menu-item>
       </el-menu>
+      <div class="admin-aside-footer" style="padding: 15px; border-top: 4px solid #000; background-color: #f1f5f9;">
+        <IcpFooter />
+      </div>
     </el-aside>
     <el-container class="main-container">
       <el-header class="admin-header">
@@ -48,6 +51,7 @@ import { computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { Odometer, User, List, Setting, Document } from '@element-plus/icons-vue'
+import IcpFooter from '@/components/IcpFooter.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -71,12 +75,14 @@ async function handleLogout() {
 .admin-layout {
   height: 100vh;
   background-color: #fff;
+  overflow: hidden;
 }
 
 .admin-aside {
   border-right: 4px solid #000;
   display: flex;
   flex-direction: column;
+  box-sizing: border-box;
 }
 
 .logo {
@@ -132,6 +138,7 @@ async function handleLogout() {
   height: 64px;
   border-bottom: 4px solid #000;
   padding: 0 30px;
+  box-sizing: border-box;
 }
 
 .admin-info {
@@ -160,5 +167,6 @@ async function handleLogout() {
   padding: 30px;
   height: calc(100vh - 64px);
   overflow-y: auto;
+  box-sizing: border-box;
 }
 </style>

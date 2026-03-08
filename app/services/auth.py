@@ -18,6 +18,33 @@ JWT_EXPIRE_HOURS = 24
 MAX_LOGIN_FAILURES = 5
 LOCKOUT_MINUTES = 15
 
+# Demo 模式配置
+DEMO_MODE = os.environ.get("DEMO_MODE", "0") == "1"
+DEMO_ALLOWED_IPS = os.environ.get("DEMO_ALLOWED_IPS", "127.0.0.1,::1,localhost").split(",")
+
+
+def is_demo_mode() -> bool:
+    """检查是否启用 demo 模式。"""
+    return DEMO_MODE
+
+
+def is_ip_allowed(ip: str) -> bool:
+    """检查 IP 是否在白名单中。"""
+    # 标准化 IP 地址
+    normalized_ip = ip.strip()
+    # 处理 IPv6 的 localhost
+    if normalized_ip == "::1":
+        normalized_ip = "127.0.0.1"
+    
+    for allowed_ip in DEMO_ALLOWED_IPS:
+        allowed_ip = allowed_ip.strip()
+        if allowed_ip == "localhost":
+            if normalized_ip in ["127.0.0.1", "::1"]:
+                return True
+        elif normalized_ip == allowed_ip:
+            return True
+    return False
+
 
 def hash_password(password: str) -> str:
     """使用 bcrypt 对密码进行哈希。"""
@@ -133,6 +160,8 @@ def authenticate(username: str, password: str) -> dict:
 def get_current_admin(request: Request) -> dict:
     """
     FastAPI 依赖项：从 Authorization header (Bearer) 或 cookie 中提取并验证 JWT。
+    
+    在 demo 模式下，跳过认证。
 
     Returns:
         解码后的 payload 字典（包含 sub 等字段）。
@@ -140,6 +169,12 @@ def get_current_admin(request: Request) -> dict:
     Raises:
         HTTPException(401): 令牌缺失或无效。
     """
+    # Demo 模式：跳过认证
+    if DEMO_MODE:
+        # 返回一个虚拟的 admin payload
+        return {"sub": "demo_user", "demo": True}
+    
+    # 正常模式：验证 JWT
     token = None
 
     # 优先从 Authorization header 获取

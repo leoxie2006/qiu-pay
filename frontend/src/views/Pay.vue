@@ -52,6 +52,9 @@
         </div>
       </template>
     </div>
+    <div style="position: absolute; bottom: 20px; left: 0; right: 0; text-align: center;">
+      <IcpFooter />
+    </div>
   </div>
 </template>
 
@@ -60,6 +63,7 @@ import { ref, onMounted, onUnmounted } from 'vue'
 import { useRoute } from 'vue-router'
 import axios from 'axios'
 import type { PayPageData } from '@/types'
+import IcpFooter from '@/components/IcpFooter.vue'
 
 const route = useRoute()
 const tradeNo = route.params.tradeNo as string
@@ -133,10 +137,13 @@ onUnmounted(stopPolling)
   display: flex;
   align-items: center;
   justify-content: center;
+  position: relative;
+  padding: 20px;
+  padding-bottom: 60px;
+  box-sizing: border-box;
   background-color: #fff;
   background-image: radial-gradient(#000 1px, transparent 1px);
   background-size: 20px 20px;
-  padding: 20px;
   font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
 }
 

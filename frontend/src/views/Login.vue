@@ -45,6 +45,9 @@
         </el-form>
       </div>
     </div>
+    <div style="position: absolute; bottom: 20px; left: 0; right: 0; text-align: center;">
+      <IcpFooter />
+    </div>
   </div>
 </template>
 
@@ -54,6 +57,7 @@ import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import type { FormInstance, FormRules } from 'element-plus'
 import { useAuthStore } from '@/stores/auth'
+import IcpFooter from '@/components/IcpFooter.vue'
 
 const router = useRouter()
 const authStore = useAuthStore()
@@ -96,6 +100,9 @@ async function handleLogin() {
   align-items: center;
   justify-content: center;
   min-height: 100vh;
+  position: relative;
+  padding-bottom: 60px;
+  box-sizing: border-box;
   background-color: #fff;
   background-image: radial-gradient(#000 1px, transparent 1px);
   background-size: 20px 20px;
