@@ -163,13 +163,6 @@ npm run dev
 pytest
 ```
 
-### 构建 Docker 镜像
-
-```bash
-docker build -t qiusheng26/qiu-pay:latest .
-docker push qiusheng26/qiu-pay:latest
-```
-
 ## ⚙️ 环境变量
 
 | 变量 | 默认值 | 说明 |
