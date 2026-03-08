@@ -59,6 +59,39 @@ def _decrypt(ciphertext: str) -> str:
     return f.decrypt(ciphertext.encode("utf-8")).decode("utf-8")
 
 
+def _mask_app_id(app_id: str) -> str:
+    """对应用 ID 做展示脱敏，保留前后少量字符用于识别。"""
+    if not app_id:
+        return ""
+    if len(app_id) <= 4:
+        return "*" * len(app_id)
+    if len(app_id) <= 8:
+        return f"{app_id[:2]}{'*' * (len(app_id) - 4)}{app_id[-2:]}"
+    return f"{app_id[:4]}{'*' * (len(app_id) - 8)}{app_id[-4:]}"
+
+
+def _get_credential_row(
+    credential_id: int,
+    merchant_id: int | None = None,
+):
+    """按凭证 ID 读取原始数据库记录，可选限制所属商户。"""
+    db = get_db()
+    try:
+        if merchant_id is None:
+            row = db.execute(
+                "SELECT * FROM merchant_credentials WHERE id = ?",
+                (credential_id,),
+            ).fetchone()
+        else:
+            row = db.execute(
+                "SELECT * FROM merchant_credentials WHERE id = ? AND merchant_id = ?",
+                (credential_id, merchant_id),
+            ).fetchone()
+        return dict(row) if row else None
+    finally:
+        db.close()
+
+
 # ── 通用配置读写 ──────────────────────────────────────────
 
 
@@ -306,6 +339,12 @@ def save_merchant_credential(
     if not app_id or not public_key or not private_key:
         raise PlatformConfigError("应用ID、公钥和私钥不能为空")
 
+    existing_credential = None
+    if credential_id is not None:
+        existing_credential = _get_credential_row(credential_id, merchant_id)
+        if not existing_credential:
+            raise PlatformConfigError("凭证不存在或不属于当前商户")
+
     qrcode_url = None
     qrcode_path = None
 
@@ -359,12 +398,8 @@ def save_merchant_credential(
             # 更新
             if qrcode_url:
                 # 删除旧图片
-                old_row = db.execute(
-                    "SELECT qrcode_path FROM merchant_credentials WHERE id = ?",
-                    (credential_id,),
-                ).fetchone()
-                if old_row and old_row["qrcode_path"]:
-                    old_file = Path(old_row["qrcode_path"])
+                if existing_credential and existing_credential["qrcode_path"]:
+                    old_file = Path(existing_credential["qrcode_path"])
                     if old_file.exists():
                         try:
                             old_file.unlink()
@@ -375,18 +410,18 @@ def save_merchant_credential(
                        SET qrcode_path = ?, qrcode_url = ?, app_id = ?,
                            public_key = ?, private_key = ?,
                            credential_status = ?, updated_at = ?
-                       WHERE id = ?""",
+                       WHERE id = ? AND merchant_id = ?""",
                     (qrcode_path, qrcode_url, enc_app_id,
-                     enc_public_key, enc_private_key, status, now, credential_id),
+                     enc_public_key, enc_private_key, status, now, credential_id, merchant_id),
                 )
             else:
                 db.execute(
                     """UPDATE merchant_credentials
                        SET app_id = ?, public_key = ?, private_key = ?,
                            credential_status = ?, updated_at = ?
-                       WHERE id = ?""",
+                       WHERE id = ? AND merchant_id = ?""",
                     (enc_app_id, enc_public_key, enc_private_key,
-                     status, now, credential_id),
+                     status, now, credential_id, merchant_id),
                 )
             db.commit()
             return {"id": credential_id, "status": status, "message": message}
@@ -409,7 +444,7 @@ def save_merchant_credential(
         db.close()
 
 
-def get_merchant_credentials(merchant_id: int) -> list[dict]:
+def get_merchant_credentials(merchant_id: int, mask_app_id: bool = False) -> list[dict]:
     """获取商户的所有凭证配置列表。"""
     db = get_db()
     try:
@@ -427,6 +462,8 @@ def get_merchant_credentials(merchant_id: int) -> list[dict]:
             # 解密 app_id 用于展示
             try:
                 d["app_id"] = _decrypt(d["app_id"])
+                if mask_app_id:
+                    d["app_id"] = _mask_app_id(d["app_id"])
             except Exception:
                 d["app_id"] = "解密失败"
             # 生成可访问的图片 URL
@@ -440,60 +477,87 @@ def get_merchant_credentials(merchant_id: int) -> list[dict]:
         db.close()
 
 
-def get_credential_by_id(credential_id: int) -> dict | None:
+def get_credential_by_id(
+    credential_id: int,
+    merchant_id: int | None = None,
+) -> dict | None:
     """获取指定凭证的完整解密信息（含私钥公钥）。"""
-    db = get_db()
+    d = _get_credential_row(credential_id, merchant_id)
+    if not d:
+        return None
     try:
-        row = db.execute(
-            """SELECT * FROM merchant_credentials WHERE id = ?""",
-            (credential_id,),
-        ).fetchone()
-        if not row:
-            return None
-        d = dict(row)
-        try:
-            d["app_id"] = _decrypt(d["app_id"])
-            d["public_key"] = _decrypt(d["public_key"])
-            d["private_key"] = _decrypt(d["private_key"])
-        except Exception:
-            return None
-        return d
-    finally:
-        db.close()
+        d["app_id"] = _decrypt(d["app_id"])
+        d["public_key"] = _decrypt(d["public_key"])
+        d["private_key"] = _decrypt(d["private_key"])
+    except Exception:
+        return None
+    return d
 
 
-def toggle_merchant_credential(credential_id: int, active: bool) -> None:
+def toggle_merchant_credential(
+    credential_id: int,
+    active: bool,
+    merchant_id: int | None = None,
+) -> bool:
     """启用/禁用商户凭证配置。"""
     now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     db = get_db()
     try:
-        db.execute(
-            "UPDATE merchant_credentials SET active = ?, updated_at = ? WHERE id = ?",
-            (1 if active else 0, now, credential_id),
-        )
+        if merchant_id is None:
+            cursor = db.execute(
+                "UPDATE merchant_credentials SET active = ?, updated_at = ? WHERE id = ?",
+                (1 if active else 0, now, credential_id),
+            )
+        else:
+            cursor = db.execute(
+                "UPDATE merchant_credentials SET active = ?, updated_at = ? WHERE id = ? AND merchant_id = ?",
+                (1 if active else 0, now, credential_id, merchant_id),
+            )
         db.commit()
+        return cursor.rowcount > 0
     finally:
         db.close()
 
 
-def delete_merchant_credential(credential_id: int) -> None:
+def delete_merchant_credential(
+    credential_id: int,
+    merchant_id: int | None = None,
+) -> bool:
     """删除商户凭证配置及其收款码图片。"""
     from pathlib import Path
     db = get_db()
     try:
-        row = db.execute(
-            "SELECT qrcode_path FROM merchant_credentials WHERE id = ?",
-            (credential_id,),
-        ).fetchone()
-        if row and row["qrcode_path"]:
+        if merchant_id is None:
+            row = db.execute(
+                "SELECT qrcode_path FROM merchant_credentials WHERE id = ?",
+                (credential_id,),
+            ).fetchone()
+        else:
+            row = db.execute(
+                "SELECT qrcode_path FROM merchant_credentials WHERE id = ? AND merchant_id = ?",
+                (credential_id, merchant_id),
+            ).fetchone()
+        if not row:
+            return False
+        if row["qrcode_path"]:
             p = Path(row["qrcode_path"])
             if p.exists():
                 try:
                     p.unlink()
                 except OSError:
                     pass
-        db.execute("DELETE FROM merchant_credentials WHERE id = ?", (credential_id,))
+        if merchant_id is None:
+            cursor = db.execute(
+                "DELETE FROM merchant_credentials WHERE id = ?",
+                (credential_id,),
+            )
+        else:
+            cursor = db.execute(
+                "DELETE FROM merchant_credentials WHERE id = ? AND merchant_id = ?",
+                (credential_id, merchant_id),
+            )
         db.commit()
+        return cursor.rowcount > 0
     finally:
         db.close()
 

@@ -591,7 +591,7 @@ async def change_password_route(
 @router.get("/merchants/{pid}/credentials")
 async def list_merchant_credentials(pid: int, admin: dict = Depends(get_current_admin)):
     """获取商户的凭证配置列表。"""
-    credentials = get_merchant_credentials(pid)
+    credentials = get_merchant_credentials(pid, mask_app_id=is_demo_mode())
     return JSONResponse(content={"code": 1, "credentials": credentials})
 
 
@@ -673,11 +673,11 @@ async def toggle_credential(
 ):
     """启用/禁用商户凭证。"""
     from app.services.platform_config import get_credential_by_id
-    cred = get_credential_by_id(cred_id)
+    cred = get_credential_by_id(cred_id, merchant_id=pid)
     if not cred:
         return JSONResponse(content={"code": -1, "msg": "凭证不存在"})
     new_active = not bool(cred.get("active", 1))
-    toggle_merchant_credential(cred_id, new_active)
+    toggle_merchant_credential(cred_id, new_active, merchant_id=pid)
     return JSONResponse(content={
         "code": 1,
         "msg": "已启用" if new_active else "已禁用",
@@ -689,5 +689,7 @@ async def remove_credential(
     pid: int, cred_id: int, admin: dict = Depends(get_current_admin)
 ):
     """删除商户凭证配置。"""
-    delete_merchant_credential(cred_id)
+    deleted = delete_merchant_credential(cred_id, merchant_id=pid)
+    if not deleted:
+        return JSONResponse(content={"code": -1, "msg": "凭证不存在"})
     return JSONResponse(content={"code": 1, "msg": "凭证配置已删除"})
