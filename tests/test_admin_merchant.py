@@ -215,7 +215,7 @@ class TestUpdateMerchant:
         assert "active" in data["msg"]
 
     def test_reset_key(self, client):
-        """重置密钥成功但不返回新密钥。"""
+        """重置密钥成功并一次性返回新密钥。"""
         token = _get_token(client)
         m = self._create(client, token)
         old_key = m["key"]
@@ -224,7 +224,8 @@ class TestUpdateMerchant:
                           headers={"Authorization": f"Bearer {token}"})
         data = resp.json()
         assert data["code"] == 1
-        assert "key" not in data
+        assert len(data["key"]) == 32
+        assert data["key"] != old_key
 
         db = get_db()
         try:
@@ -233,7 +234,7 @@ class TestUpdateMerchant:
             ).fetchone()
         finally:
             db.close()
-        assert row["key"] != old_key
+        assert row["key"] == data["key"]
 
     def test_invalid_action(self, client):
         """未知操作返回错误。"""

@@ -211,7 +211,7 @@ async function resetKey(pid: number) {
   try {
     const res = await api.put(`/v1/admin/merchants/${pid}`, { action: 'reset_key' })
     if (res.data.code === 1) {
-      ElMessage.success(res.data.msg || '密钥已重置')
+      await ElMessageBox.alert(`新密钥: ${res.data.key}`, res.data.msg || '请立即安全保存')
       await loadMerchants()
     } else {
       ElMessage.error(res.data.msg || '操作失败')

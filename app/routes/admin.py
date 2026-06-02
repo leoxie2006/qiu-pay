@@ -7,7 +7,7 @@ import io
 import math
 from datetime import date, timedelta
 
-from fastapi import APIRouter, Depends, Query, Request
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from fastapi.responses import JSONResponse, StreamingResponse
 from pydantic import BaseModel
 
@@ -236,8 +236,12 @@ async def update_merchant(pid: int, body: UpdateMerchantRequest, admin: dict = D
             status_text = "解封" if body.active else "封禁"
             return JSONResponse(content={"code": 1, "msg": f"商户已{status_text}"})
         elif body.action == "reset_key":
-            svc.reset_key(pid)
-            return JSONResponse(content={"code": 1, "msg": "密钥已重置，请通过安全渠道重新分发"})
+            new_key = svc.reset_key(pid)
+            return JSONResponse(content={
+                "code": 1,
+                "msg": "密钥已重置，请立即安全保存",
+                "key": new_key,
+            })
         else:
             return JSONResponse(content={"code": -1, "msg": f"未知操作: {body.action}"})
     except ValueError as e:
@@ -250,9 +254,32 @@ STATUS_MAP = {0: "待支付", 1: "已支付", 2: "已超时"}
 CALLBACK_STATUS_MAP = {0: "未通知", 1: "成功", 2: "失败", 3: "通知中"}
 
 
+def _parse_optional_int_filter(
+    value: str | int | None,
+    field_name: str,
+    min_value: int | None = None,
+    max_value: int | None = None,
+) -> int | None:
+    """Parse optional integer query filters while treating empty strings as absent."""
+    if value is None or value == "":
+        return None
+
+    try:
+        parsed = int(value)
+    except (TypeError, ValueError) as e:
+        raise HTTPException(status_code=422, detail=f"{field_name} 必须是整数") from e
+
+    if min_value is not None and parsed < min_value:
+        raise HTTPException(status_code=422, detail=f"{field_name} 不能小于 {min_value}")
+    if max_value is not None and parsed > max_value:
+        raise HTTPException(status_code=422, detail=f"{field_name} 不能大于 {max_value}")
+
+    return parsed
+
+
 def _build_order_filters(
-    pid: int | None,
-    status: int | None,
+    pid: str | int | None,
+    status: str | int | None,
     trade_no: str | None,
     start_date: str | None,
     end_date: str | None,
@@ -260,12 +287,15 @@ def _build_order_filters(
     """构建订单筛选 SQL 条件和参数。"""
     conditions = []
     params = []
-    if pid:
+    pid_int = _parse_optional_int_filter(pid, "pid", min_value=1)
+    status_int = _parse_optional_int_filter(status, "status", min_value=0, max_value=3)
+
+    if pid_int is not None:
         conditions.append("o.merchant_id = ?")
-        params.append(pid)
-    if status is not None and status != "":
+        params.append(pid_int)
+    if status_int is not None:
         conditions.append("o.status = ?")
-        params.append(status)
+        params.append(status_int)
     if trade_no:
         conditions.append("(o.trade_no LIKE ? OR o.out_trade_no LIKE ?)")
         params.extend([f"%{trade_no}%", f"%{trade_no}%"])
@@ -282,8 +312,8 @@ def _build_order_filters(
 async def export_orders(
     request: Request,
     admin: dict = Depends(get_current_admin),
-    pid: int | None = Query(None, ge=1),
-    status: int | None = Query(None, ge=0, le=3),
+    pid: str | None = Query(None),
+    status: str | None = Query(None),
     trade_no: str | None = Query(None),
     start_date: str | None = Query(None),
     end_date: str | None = Query(None),
@@ -445,8 +475,8 @@ async def cancel_order(trade_no: str, admin: dict = Depends(get_current_admin)):
 @router.get("/orders")
 async def order_list(
     admin: dict = Depends(get_current_admin),
-    pid: int | None = Query(None, ge=1),
-    status: int | None = Query(None, ge=0, le=3),
+    pid: str | None = Query(None),
+    status: str | None = Query(None),
     trade_no: str | None = Query(None),
     start_date: str | None = Query(None),
     end_date: str | None = Query(None),

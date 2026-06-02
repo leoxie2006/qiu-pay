@@ -125,7 +125,7 @@ function onDateChange(val: [string, string] | null) {
 async function loadOrders(page = 1) {
   loading.value = true
   try {
-    const params = { ...filters, page, per_page: 20 }
+    const params = buildOrderParams(page)
     const res = await api.get('/v1/admin/orders', { params })
     if (res.data.code === 1) {
       orders.value = res.data.orders
@@ -134,11 +134,25 @@ async function loadOrders(page = 1) {
     } else {
       ElMessage.error(res.data.msg || '操作失败')
     }
-  } catch {
-    ElMessage.error('网络请求失败，请检查网络连接')
+  } catch (e: any) {
+    ElMessage.error(e.response?.data?.msg || e.response?.data?.detail?.[0]?.msg || '网络请求失败，请检查网络连接')
   } finally {
     loading.value = false
   }
+}
+
+function buildOrderParams(page?: number) {
+  const params: Record<string, string | number> = {}
+  for (const [key, value] of Object.entries(filters)) {
+    if (value !== '') {
+      params[key] = value
+    }
+  }
+  if (page !== undefined) {
+    params.page = page
+    params.per_page = 20
+  }
+  return params
 }
 
 function handleSearch() {
@@ -199,7 +213,7 @@ async function renotifyOrder(tradeNo: string) {
 async function exportCSV() {
   try {
     const res = await api.get('/v1/admin/orders/export', {
-      params: filters,
+      params: buildOrderParams(),
       responseType: 'blob',
     })
     const url = URL.createObjectURL(new Blob([res.data]))

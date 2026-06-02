@@ -274,6 +274,15 @@ class TestOrderList:
         )
         assert resp.status_code == 422
 
+    def test_empty_pid_and_status_filters_are_ignored(self, client):
+        token = _get_token(client)
+        resp = client.get(
+            "/v1/admin/orders?pid=&status=&page=1&per_page=20",
+            headers={"Authorization": f"Bearer {token}"},
+        )
+        assert resp.status_code == 200
+        assert resp.json()["code"] == 1
+
 
 # ── GET /admin/orders/{trade_no} 测试 ──
 
@@ -429,3 +438,12 @@ class TestExportOrders:
     def test_export_without_token_returns_401(self, client):
         resp = client.get("/v1/admin/orders/export")
         assert resp.status_code == 401
+
+    def test_export_ignores_empty_pid_and_status_filters(self, client):
+        token = _get_token(client)
+        resp = client.get(
+            "/v1/admin/orders/export?pid=&status=",
+            headers={"Authorization": f"Bearer {token}"},
+        )
+        assert resp.status_code == 200
+        assert "text/csv" in resp.headers.get("content-type", "")
