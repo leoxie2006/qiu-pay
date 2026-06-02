@@ -193,7 +193,6 @@ class UpdateMerchantRequest(BaseModel):
     active: int | None = None  # 0 or 1, required when action="toggle"
 
 
-
 @router.get("/merchants")
 async def merchant_list(admin: dict = Depends(get_current_admin)):
     """商户列表，返回 JSON。"""
@@ -237,8 +236,8 @@ async def update_merchant(pid: int, body: UpdateMerchantRequest, admin: dict = D
             status_text = "解封" if body.active else "封禁"
             return JSONResponse(content={"code": 1, "msg": f"商户已{status_text}"})
         elif body.action == "reset_key":
-            new_key = svc.reset_key(pid)
-            return JSONResponse(content={"code": 1, "msg": "密钥已重置", "key": new_key})
+            svc.reset_key(pid)
+            return JSONResponse(content={"code": 1, "msg": "密钥已重置，请通过安全渠道重新分发"})
         else:
             return JSONResponse(content={"code": -1, "msg": f"未知操作: {body.action}"})
     except ValueError as e:
@@ -252,8 +251,8 @@ CALLBACK_STATUS_MAP = {0: "未通知", 1: "成功", 2: "失败", 3: "通知中"}
 
 
 def _build_order_filters(
-    pid: str | None,
-    status: str | None,
+    pid: int | None,
+    status: int | None,
     trade_no: str | None,
     start_date: str | None,
     end_date: str | None,
@@ -263,10 +262,10 @@ def _build_order_filters(
     params = []
     if pid:
         conditions.append("o.merchant_id = ?")
-        params.append(int(pid))
+        params.append(pid)
     if status is not None and status != "":
         conditions.append("o.status = ?")
-        params.append(int(status))
+        params.append(status)
     if trade_no:
         conditions.append("(o.trade_no LIKE ? OR o.out_trade_no LIKE ?)")
         params.extend([f"%{trade_no}%", f"%{trade_no}%"])
@@ -283,8 +282,8 @@ def _build_order_filters(
 async def export_orders(
     request: Request,
     admin: dict = Depends(get_current_admin),
-    pid: str | None = Query(None),
-    status: str | None = Query(None),
+    pid: int | None = Query(None, ge=1),
+    status: int | None = Query(None, ge=0, le=3),
     trade_no: str | None = Query(None),
     start_date: str | None = Query(None),
     end_date: str | None = Query(None),
@@ -446,8 +445,8 @@ async def cancel_order(trade_no: str, admin: dict = Depends(get_current_admin)):
 @router.get("/orders")
 async def order_list(
     admin: dict = Depends(get_current_admin),
-    pid: str | None = Query(None),
-    status: str | None = Query(None),
+    pid: int | None = Query(None, ge=1),
+    status: int | None = Query(None, ge=0, le=3),
     trade_no: str | None = Query(None),
     start_date: str | None = Query(None),
     end_date: str | None = Query(None),

@@ -84,6 +84,52 @@ class TestRouteRegistration:
         assert resp.status_code in (200, 401)
 
 
+class TestSecurityDefaults:
+    """安全默认配置测试。"""
+
+    def test_api_docs_can_be_disabled(self):
+        from fastapi import FastAPI
+
+        test_app = FastAPI(
+            docs_url=None,
+            redoc_url=None,
+            openapi_url=None,
+        )
+        client = TestClient(test_app)
+
+        assert client.get("/docs").status_code == 404
+        assert client.get("/redoc").status_code == 404
+        assert client.get("/openapi.json").status_code == 404
+
+    def test_rate_limit_returns_429(self):
+        from fastapi import FastAPI
+        from app.middleware.rate_limit import IPRateLimitMiddleware, RateLimitRule
+
+        test_app = FastAPI()
+        test_app.add_middleware(
+            IPRateLimitMiddleware,
+            rules=(
+                RateLimitRule(
+                    prefix="/limited",
+                    limit=2,
+                    window_seconds=60,
+                    methods=frozenset({"GET"}),
+                ),
+            ),
+        )
+
+        @test_app.get("/limited")
+        async def limited():
+            return {"ok": True}
+
+        client = TestClient(test_app)
+        assert client.get("/limited").status_code == 200
+        assert client.get("/limited").status_code == 200
+        resp = client.get("/limited")
+        assert resp.status_code == 429
+        assert resp.json()["code"] == -1
+
+
 class TestStartupEvent:
     """启动事件测试。"""
 

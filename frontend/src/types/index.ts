@@ -34,6 +34,7 @@ export interface Merchant {
   username: string
   email: string
   key: string
+  key_fingerprint?: string
   active: number
   money: string
   orders: number

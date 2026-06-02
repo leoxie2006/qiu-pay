@@ -15,6 +15,11 @@ class MerchantService:
         """生成 32 位随机十六进制密钥。"""
         return secrets.token_hex(16)
 
+    @staticmethod
+    def _mask_key(key: str) -> str:
+        """返回密钥指纹，避免 API 响应泄露完整签名密钥。"""
+        return f"{key[:8]}...{key[-4:]}"
+
     def create_merchant(self, username: str, email: str) -> Merchant:
         """
         创建商户，分配自增 pid 和 32 位随机 KEY，设置 active=1。
@@ -152,7 +157,8 @@ class MerchantService:
             return {
                 "code": 1,
                 "pid": row["id"],
-                "key": row["key"],
+                "key": self._mask_key(row["key"]),
+                "key_fingerprint": self._mask_key(row["key"]),
                 "active": row["active"],
                 "money": money_yuan,
                 "type": row["settle_type"],
@@ -199,7 +205,8 @@ class MerchantService:
                     "pid": row["id"],
                     "username": row["username"],
                     "email": row["email"],
-                    "key": row["key"],
+                    "key": self._mask_key(row["key"]),
+                    "key_fingerprint": self._mask_key(row["key"]),
                     "active": row["active"],
                     "money": f"{money_row['total_cents'] / 100:.2f}",
                     "orders": total,

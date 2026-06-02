@@ -90,8 +90,13 @@ class TestMerchantListPage:
         data = resp.json()
         assert data["code"] == 1
         m = data["merchants"][0]
-        for field in ("pid", "username", "email", "key", "active", "money", "orders", "order_today", "created_at"):
+        for field in (
+            "pid", "username", "email", "key", "key_fingerprint", "active",
+            "money", "orders", "order_today", "created_at",
+        ):
             assert field in m, f"缺少字段: {field}"
+        assert m["key"] == m["key_fingerprint"]
+        assert len(m["key"]) < 32
 
     def test_list_shows_created_merchant(self, client):
         """创建商户后列表包含该商户。"""
@@ -210,7 +215,7 @@ class TestUpdateMerchant:
         assert "active" in data["msg"]
 
     def test_reset_key(self, client):
-        """重置密钥成功返回新密钥。"""
+        """重置密钥成功但不返回新密钥。"""
         token = _get_token(client)
         m = self._create(client, token)
         old_key = m["key"]
@@ -219,9 +224,16 @@ class TestUpdateMerchant:
                           headers={"Authorization": f"Bearer {token}"})
         data = resp.json()
         assert data["code"] == 1
-        assert "key" in data
-        assert len(data["key"]) == 32
-        assert data["key"] != old_key
+        assert "key" not in data
+
+        db = get_db()
+        try:
+            row = db.execute(
+                "SELECT key FROM merchants WHERE id = ?", (m["pid"],)
+            ).fetchone()
+        finally:
+            db.close()
+        assert row["key"] != old_key
 
     def test_invalid_action(self, client):
         """未知操作返回错误。"""

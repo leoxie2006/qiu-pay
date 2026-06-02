@@ -141,7 +141,7 @@ class TestMerchantValidation:
         })
         data = resp.json()
         assert data["code"] == -1
-        assert "商户不存在" in data["msg"]
+        assert data["msg"] == "商户信息无效"
 
     def test_banned_merchant(self, client, merchant):
         MerchantService().toggle_status(merchant.id, False)
@@ -151,7 +151,7 @@ class TestMerchantValidation:
         })
         data = resp.json()
         assert data["code"] == -1
-        assert "封禁" in data["msg"]
+        assert data["msg"] == "商户信息无效"
 
 
 class TestSignatureValidation:
@@ -165,7 +165,7 @@ class TestSignatureValidation:
         })
         data = resp.json()
         assert data["code"] == -1
-        assert "签名错误" in data["msg"]
+        assert data["msg"] == "商户信息无效"
 
 
 class TestSuccessfulOrder:

@@ -192,7 +192,8 @@ class TestMerchantQuery:
         data = resp.json()
         assert data["code"] == 1
         assert data["pid"] == merchant.id
-        assert data["key"] == merchant.key
+        assert data["key"] != merchant.key
+        assert data["key"] == data["key_fingerprint"]
         assert data["active"] == 1
 
     def test_response_has_all_fields(self, client, merchant):
@@ -202,7 +203,7 @@ class TestMerchantQuery:
         })
         data = resp.json()
         required_fields = [
-            "code", "pid", "key", "active", "money", "type",
+            "code", "pid", "key", "key_fingerprint", "active", "money", "type",
             "account", "username", "orders", "order_today", "order_lastday",
         ]
         for field in required_fields:
@@ -241,7 +242,7 @@ class TestPidKeyValidation:
         })
         data = resp.json()
         assert data["code"] == -1
-        assert "商户不存在" in data["msg"]
+        assert data["msg"] == "商户信息无效"
 
     def test_wrong_key_order(self, client, merchant):
         """act=order 错误 key 返回错误。"""
@@ -251,7 +252,7 @@ class TestPidKeyValidation:
         })
         data = resp.json()
         assert data["code"] == -1
-        assert "密钥" in data["msg"]
+        assert data["msg"] == "商户信息无效"
 
     def test_invalid_pid_query(self, client):
         """act=query 无效 pid 返回错误。"""

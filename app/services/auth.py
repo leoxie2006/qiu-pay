@@ -3,6 +3,7 @@
 """
 
 import os
+import base64
 from datetime import datetime, timedelta, timezone
 
 import bcrypt
@@ -75,6 +76,7 @@ def verify_token(token: str) -> dict:
     Raises:
         ValueError: 令牌无效或已过期。
     """
+    _require_canonical_jwt(token)
     try:
         payload = jwt.decode(token, JWT_SECRET, algorithms=[JWT_ALGORITHM])
         if "sub" not in payload:
@@ -82,6 +84,23 @@ def verify_token(token: str) -> dict:
         return payload
     except JWTError as e:
         raise ValueError(f"令牌无效: {e}")
+
+
+def _require_canonical_jwt(token: str) -> None:
+    """Reject non-canonical base64url segments before JWT verification."""
+    parts = token.split(".")
+    if len(parts) != 3:
+        raise ValueError("令牌格式无效")
+
+    for part in parts:
+        try:
+            padded = part + "=" * (-len(part) % 4)
+            decoded = base64.urlsafe_b64decode(padded.encode("ascii"))
+            canonical = base64.urlsafe_b64encode(decoded).decode("ascii").rstrip("=")
+        except Exception as e:
+            raise ValueError("令牌格式无效") from e
+        if canonical != part:
+            raise ValueError("令牌格式无效")
 
 
 def authenticate(username: str, password: str) -> dict:

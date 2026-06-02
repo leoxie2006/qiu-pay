@@ -19,6 +19,8 @@ logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
+MERCHANT_AUTH_ERROR = "商户信息无效"
+
 
 @router.get("/v1/system/info")
 async def system_info():
@@ -47,7 +49,7 @@ def _validate_merchant(pid: Optional[str], key: Optional[str]) -> tuple:
     try:
         pid_int = int(pid)
     except (TypeError, ValueError):
-        return None, JSONResponse(content={"code": -1, "msg": "商户ID无效"})
+        return None, JSONResponse(content={"code": -1, "msg": MERCHANT_AUTH_ERROR})
 
     db = get_db()
     try:
@@ -58,10 +60,10 @@ def _validate_merchant(pid: Optional[str], key: Optional[str]) -> tuple:
         db.close()
 
     if not row:
-        return None, JSONResponse(content={"code": -1, "msg": "商户不存在"})
+        return None, JSONResponse(content={"code": -1, "msg": MERCHANT_AUTH_ERROR})
 
     if row["key"] != key:
-        return None, JSONResponse(content={"code": -1, "msg": "商户密钥错误"})
+        return None, JSONResponse(content={"code": -1, "msg": MERCHANT_AUTH_ERROR})
 
     return row, None
 

@@ -58,15 +58,15 @@ async def create_payment(request: Request):
         db.close()
 
     if not merchant_row:
-        return JSONResponse(content={"code": -1, "msg": "商户不存在"})
+        return JSONResponse(content={"code": -1, "msg": "商户信息无效"})
     if merchant_row["active"] != 1:
-        return JSONResponse(content={"code": -1, "msg": "商户已被封禁"})
+        return JSONResponse(content={"code": -1, "msg": "商户信息无效"})
 
     merchant_key = merchant_row["key"]
 
     # 3. 验证签名（generate_sign 会自动过滤 sign/sign_type 和空值）
     if not verify_sign(params, merchant_key, sign):
-        return JSONResponse(content={"code": -1, "msg": "签名错误"})
+        return JSONResponse(content={"code": -1, "msg": "商户信息无效"})
 
     # 4. 调用 OrderService 创建订单
     device = params.get("device", "pc")

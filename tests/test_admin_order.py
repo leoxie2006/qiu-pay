@@ -258,6 +258,22 @@ class TestOrderList:
         assert data["total_pages"] == 2
         assert len(data["orders"]) == 5
 
+    def test_rejects_injected_pid_filter(self, client):
+        token = _get_token(client)
+        resp = client.get(
+            "/v1/admin/orders?pid=1%20OR%201=1",
+            headers={"Authorization": f"Bearer {token}"},
+        )
+        assert resp.status_code == 422
+
+    def test_rejects_injected_status_filter(self, client):
+        token = _get_token(client)
+        resp = client.get(
+            "/v1/admin/orders?status=1'",
+            headers={"Authorization": f"Bearer {token}"},
+        )
+        assert resp.status_code == 422
+
 
 # ── GET /admin/orders/{trade_no} 测试 ──
 

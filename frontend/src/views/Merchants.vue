@@ -11,8 +11,7 @@
         <el-table-column prop="email" label="邮箱" min-width="160" />
         <el-table-column label="密钥" min-width="160">
           <template #default="{ row }">
-            <span style="margin-right: 6px;">{{ row.key.substring(0, 8) }}...</span>
-            <el-button size="small" link @click.stop="copyKey(row.key)">复制</el-button>
+            <span>{{ row.key_fingerprint || row.key }}</span>
           </template>
         </el-table-column>
         <el-table-column label="状态" width="80">
@@ -28,7 +27,7 @@
         <el-table-column prop="orders" label="总订单" width="80" />
         <el-table-column prop="order_today" label="今日订单" width="90" />
         <el-table-column prop="created_at" label="创建时间" min-width="160" />
-        <el-table-column label="操作" width="340" fixed="right">
+        <el-table-column label="操作" width="280" fixed="right">
           <template #default="{ row }">
             <el-button
               :type="row.active ? 'danger' : 'success'"
@@ -39,7 +38,6 @@
             </el-button>
             <el-button size="small" @click="resetKey(row.pid)">重置</el-button>
             <el-button size="small" style="background-color: #000; color: #fff;" @click="openCredentials(row.pid)">凭证</el-button>
-            <el-button size="small" type="warning" :loading="testingPid === row.pid" @click="testPayment(row)">测试</el-button>
           </template>
         </el-table-column>
       </el-table>
@@ -144,7 +142,6 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import md5 from 'blueimp-md5'
 import api from '@/api'
 import type { Merchant } from '@/types'
 
@@ -160,59 +157,6 @@ const credList = ref<any[]>([])
 const credForm = ref({ app_id: '', public_key: '', private_key: '' })
 const credFile = ref<File | null>(null)
 const credSaving = ref(false)
-const testingPid = ref<number | null>(null)
-
-function generateSign(params: Record<string, string>, key: string): string {
-  const filtered = Object.entries(params).filter(
-    ([k, v]) => k !== 'sign' && k !== 'sign_type' && v !== '' && v != null
-  )
-  filtered.sort((a, b) => a[0].localeCompare(b[0]))
-  const queryString = filtered.map(([k, v]) => `${k}=${v}`).join('&')
-  return md5(queryString + key)
-}
-
-async function testPayment(merchant: Merchant) {
-  if (!merchant.active) {
-    ElMessage.warning('该商户已被封禁，无法测试')
-    return
-  }
-  testingPid.value = merchant.pid
-  try {
-    const money = (Math.floor(Math.random() * 99) + 1) / 100 // 0.01 ~ 0.99
-    const outTradeNo = `test_${Date.now()}`
-    const params: Record<string, string> = {
-      pid: String(merchant.pid),
-      type: 'alipay',
-      out_trade_no: outTradeNo,
-      name: '赞赏一笔',
-      money: money.toFixed(2),
-      notify_url: window.location.origin + '/test_notify',
-      return_url: window.location.origin + '/admin/orders',
-      sign_type: 'MD5',
-    }
-    params.sign = generateSign(params, merchant.key)
-
-    const formData = new URLSearchParams()
-    for (const [k, v] of Object.entries(params)) {
-      formData.append(k, v)
-    }
-
-    const res = await api.post('/xpay/epay/mapi.php', formData, {
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-    })
-
-    if (res.data.code === 1) {
-      ElMessage.success('测试订单创建成功')
-      window.open(`/pay/${res.data.trade_no}`, '_blank')
-    } else {
-      ElMessage.error(res.data.msg || '创建测试订单失败')
-    }
-  } catch {
-    ElMessage.error('创建测试订单失败，请检查商户凭证配置')
-  } finally {
-    testingPid.value = null
-  }
-}
 
 async function loadMerchants() {
   try {
@@ -234,6 +178,7 @@ async function createMerchant() {
     const res = await api.post('/v1/admin/merchants', form.value)
     if (res.data.code === 1) {
       ElMessage.success('商户创建成功')
+      await ElMessageBox.alert(`初始密钥: ${res.data.merchant.key}`, '请立即安全保存')
       showCreateDialog.value = false
       form.value = { username: '', email: '' }
       await loadMerchants()
@@ -266,7 +211,7 @@ async function resetKey(pid: number) {
   try {
     const res = await api.put(`/v1/admin/merchants/${pid}`, { action: 'reset_key' })
     if (res.data.code === 1) {
-      await ElMessageBox.alert(`新密钥: ${res.data.key}`, '密钥已重置')
+      ElMessage.success(res.data.msg || '密钥已重置')
       await loadMerchants()
     } else {
       ElMessage.error(res.data.msg || '操作失败')
@@ -274,14 +219,6 @@ async function resetKey(pid: number) {
   } catch {
     ElMessage.error('网络请求失败，请检查网络连接')
   }
-}
-
-function copyKey(key: string) {
-  navigator.clipboard.writeText(key).then(() => {
-    ElMessage.success('密钥已复制到剪贴板')
-  }).catch(() => {
-    ElMessage.error('复制失败，请手动复制')
-  })
 }
 
 // 凭证管理

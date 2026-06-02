@@ -145,8 +145,10 @@ class TestGetMerchantInfo:
     def test_returns_all_required_fields(self, svc):
         m = svc.create_merchant("info_test", "i@x.com")
         info = svc.get_merchant_info(m.id)
-        required_keys = {"code", "pid", "key", "active", "money", "type",
-                         "account", "username", "orders", "order_today", "order_lastday"}
+        required_keys = {
+            "code", "pid", "key", "key_fingerprint", "active", "money", "type",
+            "account", "username", "orders", "order_today", "order_lastday",
+        }
         assert required_keys.issubset(info.keys())
 
     def test_correct_values(self, svc):
@@ -154,7 +156,9 @@ class TestGetMerchantInfo:
         info = svc.get_merchant_info(m.id)
         assert info["code"] == 1
         assert info["pid"] == m.id
-        assert info["key"] == m.key
+        assert info["key"] == info["key_fingerprint"]
+        assert info["key"] != m.key
+        assert len(info["key"]) < len(m.key)
         assert info["active"] == 1
         assert info["orders"] == 0
         assert info["order_today"] == 0
@@ -221,6 +225,9 @@ class TestListMerchants:
         assert "pid" in m
         assert "username" in m
         assert "email" in m
+        assert "key" in m
+        assert "key_fingerprint" in m
+        assert m["key"] == m["key_fingerprint"]
         assert "active" in m
         assert "money" in m
         assert "orders" in m

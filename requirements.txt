@@ -12,3 +12,4 @@ hypothesis
 pytest
 pytest-asyncio
 python-dotenv
+qrcode

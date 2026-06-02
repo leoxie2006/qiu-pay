@@ -138,7 +138,19 @@ async def lifespan(app: FastAPI):
             pass
 
 
-app = FastAPI(title="Qiu-Pay", description="支付中间平台", lifespan=lifespan)
+_docs_enabled = os.environ.get(
+    "API_DOCS_ENABLED",
+    "1" if os.environ.get("TESTING") == "1" else "0",
+) == "1"
+
+app = FastAPI(
+    title="Qiu-Pay",
+    description="支付中间平台",
+    lifespan=lifespan,
+    docs_url="/docs" if _docs_enabled else None,
+    redoc_url="/redoc" if _docs_enabled else None,
+    openapi_url="/openapi.json" if _docs_enabled else None,
+)
 
 # 挂载静态文件
 app.mount("/static", StaticFiles(directory=str(BASE_DIR / "static")), name="static")
@@ -164,6 +176,13 @@ if os.environ.get("CORS_ENABLED", "0") == "1":
 
 from app.middleware import DemoIPCheckMiddleware
 app.add_middleware(DemoIPCheckMiddleware)
+
+if os.environ.get(
+    "RATE_LIMIT_ENABLED",
+    "0" if os.environ.get("TESTING") == "1" else "1",
+) == "1":
+    from app.middleware.rate_limit import IPRateLimitMiddleware
+    app.add_middleware(IPRateLimitMiddleware)
 
 # ── 路由注册 ──────────────────────────────────────────────
 
