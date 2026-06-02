@@ -11,7 +11,10 @@ export default defineConfig(({ mode }) => {
   const backendPort = env.BACKEND_PORT || '8000'
   const frontendHost = env.FRONTEND_HOST || '0.0.0.0'
   const frontendPort = Number(env.FRONTEND_PORT || '5173')
-  const backendUrl = `http://${backendHost === '0.0.0.0' ? 'localhost' : backendHost}:${backendPort}`
+  const proxyBackendHost = ['0.0.0.0', 'localhost'].includes(backendHost)
+    ? '127.0.0.1'
+    : backendHost
+  const backendUrl = `http://${proxyBackendHost}:${backendPort}`
 
   return {
     plugins: [vue()],
