@@ -437,3 +437,17 @@ class TestBuildReturnUrl:
         url = svc.build_return_url(order_id)
         assert url != ""
         assert "trade_no=" in url
+
+
+@pytest.mark.parametrize("status", [0, 2, 3])
+def test_issue14_callback_service_rejects_unpaid(svc, merchant, status):
+    order_id = _insert_paid_order(merchant, status=status)
+    with patch("app.services.callback_service.httpx.Client") as client_mock:
+        assert svc.build_return_url(order_id) == ""
+        assert svc.send_notify(order_id) is False
+        svc.retry_notify(order_id, 1)
+        client_mock.assert_not_called()
+    order = svc._get_order_with_merchant(order_id)
+    assert order["callback_attempts"] == 0
+    with pytest.raises(ValueError, match="paid"):
+        svc._build_notify_params(order)

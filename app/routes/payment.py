@@ -185,12 +185,14 @@ async def pay_page(trade_no: str):
 
     # 构建 return_url（已支付时用于前端跳转）
     return_url = ""
-    if order["return_url"]:
+    if order["status"] == 1 and order["return_url"]:
         try:
             svc = CallbackService()
             return_url = svc.build_return_url(order["id"])
         except Exception:
-            return_url = order["return_url"]
+            logger.exception("构建支付回跳链接失败 (order_id=%s)", order["id"])
+            # Fail closed: never expose an unvalidated merchant-provided URL.
+            return_url = ""
 
     # Build clean order dict for response (exclude internal fields)
     order_data = {

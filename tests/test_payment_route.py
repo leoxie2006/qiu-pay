@@ -460,3 +460,69 @@ class TestPayPage:
 
         data = resp.json()
         assert data["order"]["money"] == "5.00"
+
+
+@pytest.mark.parametrize("status", [0, 1, 2, 3])
+def test_issue14_only_paid_order_gets_valid_success_signature(client, merchant, status):
+    """Success attestations must only be available for paid orders."""
+    import hashlib
+    from urllib.parse import urlsplit, parse_qsl
+
+    trade_no = f"ISSUE14_{status}"
+    _insert_order_directly(merchant.id, trade_no, status=status)
+    db = get_db()
+    try:
+        db.execute("UPDATE orders SET return_url=? WHERE trade_no=?",
+                   ("https://merchant.example.test/return", trade_no))
+        db.commit()
+    finally:
+        db.close()
+    response = client.get(f"/v1/pay/{trade_no}")
+    assert response.status_code == 200
+    data = response.json()
+    params = dict(parse_qsl(urlsplit(data["return_url"]).query))
+    unsigned = {k: v for k, v in params.items()
+                if k not in ("sign", "sign_type") and v != ""}
+    canonical = "&".join(f"{k}={unsigned[k]}" for k in sorted(unsigned))
+    expected = hashlib.md5((canonical + merchant.key).encode()).hexdigest()
+    valid = params.get("sign") == expected
+    print(f"ISSUE14 status={status} response_status={data['order']['status']} "
+          f"trade_status={params.get('trade_status')} signature_valid={valid}")
+    assert data["order"]["status"] == status
+    if status == 1:
+        assert params["trade_status"] == "TRADE_SUCCESS"
+        assert valid
+    else:
+        assert data["return_url"] == ""
+
+
+def test_issue14_signing_error_never_exposes_raw_return_url(client, merchant):
+    _insert_order_directly(merchant.id, "ISSUE14_ERROR", status=1)
+    db = get_db()
+    try:
+        db.execute("UPDATE orders SET return_url=? WHERE trade_no=?",
+                   ("https://merchant.example.test/return?trade_status=TRADE_SUCCESS&sign=untrusted",
+                    "ISSUE14_ERROR"))
+        db.commit()
+    finally:
+        db.close()
+    with patch("app.routes.payment.CallbackService.build_return_url",
+               side_effect=RuntimeError("test signing failure")):
+        assert client.get("/v1/pay/ISSUE14_ERROR").json()["return_url"] == ""
+
+
+def test_issue14_pending_then_paid_gets_fresh_signed_url(client, merchant):
+    _insert_order_directly(merchant.id, "ISSUE14_TRANSITION", status=0)
+    db = get_db()
+    try:
+        db.execute("UPDATE orders SET return_url=? WHERE trade_no=?",
+                   ("https://merchant.example.test/return", "ISSUE14_TRANSITION"))
+        db.commit()
+        assert client.get("/v1/pay/ISSUE14_TRANSITION").json()["return_url"] == ""
+        db.execute("UPDATE orders SET status=1 WHERE trade_no=?", ("ISSUE14_TRANSITION",))
+        db.commit()
+        data = client.get("/v1/pay/ISSUE14_TRANSITION").json()
+        assert data["order"]["status"] == 1
+        assert "trade_status=TRADE_SUCCESS" in data["return_url"]
+    finally:
+        db.close()

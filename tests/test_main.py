@@ -186,8 +186,12 @@ class TestStartupEvent:
 class TestSPAFallback:
     """SPA 静态文件服务与 Fallback 测试。"""
 
-    def test_no_spa_fallback_when_dir_missing(self, client):
+    def test_no_spa_fallback_when_dir_missing(self, client, tmp_path, monkeypatch):
         """SPA 目录不存在时，非 API 路径返回 404（无 fallback）。"""
+        import importlib
+        main_module = importlib.import_module("app.main")
+        # Do not depend on whether a local frontend build has already run.
+        monkeypatch.setattr(main_module, "SPA_DIR", tmp_path / "missing-spa")
         resp = client.get("/some-random-page")
         assert resp.status_code == 404
 
