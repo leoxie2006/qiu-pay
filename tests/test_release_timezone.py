@@ -22,12 +22,15 @@ def test_compose_mounts_host_timezone_file_readonly(tmp_path, file, service, env
     (tmp_path / envfile).write_text('JWT_SECRET=fixture-only\n')
     environment = {**os.environ, 'DEMO_IMAGE': 'qiu-pay:fixture'}
     environment.pop('HOST_TIMEZONE_FILE', None)
+    environment.pop('QIUPAY_IMAGE', None)
     if custom:
         environment['HOST_TIMEZONE_FILE'] = '/fixture/timezone-file'
     result = subprocess.run(['docker', 'compose', '-f', str(tmp_path / 'compose.yaml'),
                              'config', '--format', 'json'], cwd=tmp_path, env=environment,
                             capture_output=True, text=True, check=True)
     config = json.loads(result.stdout)
+    if service == 'qiu-pay':
+        assert config['services'][service]['image'] == 'ghcr.io/leoxie2006/qiu-pay:v1.1.3'
     volume = next(v for v in config['services'][service]['volumes']
                   if v.get('target') == '/etc/localtime')
     assert volume['source'] == ('/fixture/timezone-file' if custom else '/etc/localtime')

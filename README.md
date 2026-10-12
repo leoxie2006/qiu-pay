@@ -105,7 +105,7 @@ BACKEND_PORT=8000
 ```yaml
 services:
   qiupay:
-    image: qiusheng26/qiu-pay:latest
+    image: ${QIUPAY_IMAGE:-ghcr.io/leoxie2006/qiu-pay:v1.1.3}
     container_name: qiupay
     restart: unless-stopped
     ports:
