@@ -1,5 +1,5 @@
 """
-文档路由：提供 docs 目录下 Markdown 文件及根目录 README 的列表和内容读取。
+文档路由：仅提供后台使用文档，不收录发布说明或维护者文档。
 """
 
 from pathlib import Path
@@ -12,6 +12,9 @@ router = APIRouter(prefix="/api/admin/docs", tags=["docs"])
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
 DOCS_DIR = PROJECT_ROOT / "docs"
+
+# 新增仓库文档不会自动出现在后台；使用文档在此显式登记。
+USER_DOCS = ("使用教程.md", "api-guide.md", "docker-timezone.md")
 
 
 def _extract_title(filepath: Path) -> str:
@@ -28,35 +31,21 @@ def _extract_title(filepath: Path) -> str:
 
 
 def _collect_docs() -> list[dict]:
-    """收集所有可用的 md 文档：根目录 README + docs 目录下的文件。"""
-    files = []
-
-    # 根目录 README.md
-    readme = PROJECT_ROOT / "README.md"
-    if readme.exists():
-        files.append({
-            "filename": "README.md",
-            "title": _extract_title(readme),
-            "source": "root",
-        })
-
-    # docs 目录下的 md 文件
-    if DOCS_DIR.exists():
-        for f in sorted(DOCS_DIR.glob("*.md")):
-            files.append({
-                "filename": f.name,
-                "title": _extract_title(f),
-                "source": "docs",
-            })
-
-    return files
+    """按使用顺序列出已登记且存在的文档。"""
+    return [
+        {"filename": name, "title": _extract_title(DOCS_DIR / name), "source": "docs"}
+        for name in USER_DOCS if (DOCS_DIR / name).is_file()
+    ]
 
 
 def _resolve_filepath(filename: str, source: str) -> Path | None:
-    """根据 source 解析文件实际路径。"""
-    if source == "root":
-        return PROJECT_ROOT / filename
-    return DOCS_DIR / filename
+    """列表与内容接口共用范围，阻止直接读取未登记的维护文档。"""
+    if source != "docs" or filename not in USER_DOCS:
+        return None
+    path = DOCS_DIR / filename
+    if path.resolve().parent != DOCS_DIR.resolve():
+        return None
+    return path
 
 
 @router.get("/list")

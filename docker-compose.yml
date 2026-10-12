@@ -1,6 +1,6 @@
 services:
   qiu-pay:
-    image: ${QIUPAY_IMAGE:-ghcr.io/leoxie2006/qiu-pay:v1.1.3}
+    image: ${QIUPAY_IMAGE:-ghcr.io/leoxie2006/qiu-pay:latest}
     container_name: qiu-pay
     restart: unless-stopped
     ports:

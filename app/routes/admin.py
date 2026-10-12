@@ -5,6 +5,7 @@
 import csv
 import io
 import math
+import uuid
 from datetime import date, timedelta
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
@@ -246,6 +247,39 @@ async def update_merchant(pid: int, body: UpdateMerchantRequest, admin: dict = D
             return JSONResponse(content={"code": -1, "msg": f"未知操作: {body.action}"})
     except ValueError as e:
         return JSONResponse(content={"code": -1, "msg": str(e)})
+
+
+# ── Demo 测试下单 ─────────────────────────────────────────────
+
+@router.post("/merchants/{pid}/test-payment")
+async def demo_test_payment(pid: int, request: Request, admin: dict = Depends(get_current_admin)):
+    """Demo 专用下单参数：服务端签名，不向浏览器提供商户密钥。"""
+    from app.services.auth import is_ip_allowed
+    from app.services.sign import generate_sign
+
+    if not is_demo_mode():
+        raise HTTPException(status_code=404, detail="接口不存在")
+    client_ip = request.client.host if request.client else "unknown"
+    if not is_ip_allowed(client_ip):
+        raise HTTPException(status_code=403, detail="测试下单仅允许 Demo 白名单 IP 访问")
+    db = get_db()
+    try:
+        merchant = db.execute("SELECT key, active FROM merchants WHERE id = ?", (pid,)).fetchone()
+    finally:
+        db.close()
+    if not merchant:
+        raise HTTPException(status_code=404, detail="商户不存在")
+    if merchant["active"] != 1:
+        raise HTTPException(status_code=400, detail="商户已被封禁")
+
+    # 固定小额及本站回跳；不接受自定义金额、外部通知地址或模拟支付状态。
+    params = {
+        "pid": str(pid), "type": "alipay", "money": "0.01",
+        "name": "Demo 测试订单", "out_trade_no": "demo_test_" + uuid.uuid4().hex,
+        "return_url": "/admin/orders", "sign_type": "MD5",
+    }
+    params["sign"] = generate_sign(params, merchant["key"])
+    return JSONResponse(content={"code": 1, "params": params})
 
 
 # ── 订单管理 ────────────────────────────────────────────────

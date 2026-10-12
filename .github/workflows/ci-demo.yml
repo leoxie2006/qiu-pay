@@ -34,7 +34,7 @@ jobs:
         run: PYTHONPATH=. python scripts/smoke_issue14.py
       - run: npm ci --prefix frontend && npm run build --prefix frontend
       - name: Deployment script syntax
-        run: bash -n scripts/deploy/demo.sh scripts/deploy/rollback-demo.sh scripts/release/validate-tag.sh
+        run: bash -n scripts/deploy/demo.sh scripts/deploy/rollback-demo.sh scripts/release/validate-tag.sh scripts/release/publish-latest.sh
   image:
     needs: checks
     runs-on: ubuntu-latest
@@ -84,6 +84,12 @@ jobs:
           ref=$(docker image inspect --format '{{index .RepoDigests 0}}' "$IMAGE")
           [[ "$ref" =~ ^ghcr\.io/.+@sha256:[a-f0-9]{64}$ ]]
           echo "ref=$ref" >> "$GITHUB_OUTPUT"
+      - name: Publish latest from current verified main
+        if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+        env:
+          IMAGE: ${{ steps.name.outputs.tag }}
+          IMAGE_REF: ${{ steps.publish.outputs.ref }}
+        run: bash scripts/release/publish-latest.sh "$IMAGE" "$IMAGE_REF"
   deploy-demo:
     needs: image
     if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main' && vars.DEMO_DEPLOY_ENABLED == 'true'

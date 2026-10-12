@@ -105,7 +105,7 @@ BACKEND_PORT=8000
 ```yaml
 services:
   qiupay:
-    image: ${QIUPAY_IMAGE:-ghcr.io/leoxie2006/qiu-pay:v1.1.3}
+    image: ${QIUPAY_IMAGE:-ghcr.io/leoxie2006/qiu-pay:latest}
     container_name: qiupay
     restart: unless-stopped
     ports:
@@ -122,9 +122,10 @@ services:
       - .env
 ```
 
-4. 启动服务：
+4. 拉取镜像并启动服务：
 
 ```bash
+docker compose pull
 docker compose up -d
 ```
 
@@ -133,6 +134,19 @@ docker compose up -d
 容器默认只读挂载主机 `/etc/localtime`，跟随主机时区，不硬编码 `Asia/Shanghai`。
 如该路径不存在，用 `HOST_TIMEZONE_FILE` 指向主机有效的时区文件；不要设置会覆盖此挂载的 `TZ`。
 详见 [时区说明](docs/docker-timezone.md)。
+
+### 更新版本
+
+推荐镜像为 `ghcr.io/leoxie2006/qiu-pay:latest`，随通过检查的 main 更新。镜像支持 `linux/amd64`；需要固定某个版本时，可使用版本标签或 Release 附件中的 digest。
+
+更新前先备份 `.env`、数据库和上传文件。备份 SQLite 数据库时，先停止容器，或使用 SQLite 在线备份；不要直接复制正在写入的数据库。保留现有端口、数据卷与 `.env`，将 Compose 的 `image` 改为上述地址；若 `.env` 中已有 `QIUPAY_IMAGE`，也同步修改，避免继续覆盖为旧版本。
+
+```bash
+docker compose pull
+docker compose up -d --force-recreate
+```
+
+本次更新不需要迁移数据库。检查后台登录、订单查询和时间显示；若旧容器与主机时区不同，旧订单时间不会自动转换，请先确认对未完成订单的影响。主机切换时区文件后，也需重建容器。
 
 ## 🔧 开发部署
 

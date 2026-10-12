@@ -27,7 +27,7 @@
         <el-table-column prop="orders" label="总订单" width="80" />
         <el-table-column prop="order_today" label="今日订单" width="90" />
         <el-table-column prop="created_at" label="创建时间" min-width="160" />
-        <el-table-column label="操作" width="280" fixed="right">
+        <el-table-column label="操作" :width="demoTestEnabled ? 340 : 280" fixed="right">
           <template #default="{ row }">
             <el-button
               :type="row.active ? 'danger' : 'success'"
@@ -38,6 +38,9 @@
             </el-button>
             <el-button size="small" @click="resetKey(row.pid)">重置</el-button>
             <el-button size="small" style="background-color: #000; color: #fff;" @click="openCredentials(row.pid)">凭证</el-button>
+            <el-button v-if="demoTestEnabled" size="small" type="warning"
+              :disabled="!row.active" :loading="testingPid === row.pid"
+              @click="testPayment(row)">测试</el-button>
           </template>
         </el-table-column>
       </el-table>
@@ -141,6 +144,7 @@
 
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import api from '@/api'
 import type { Merchant } from '@/types'
@@ -157,6 +161,49 @@ const credList = ref<any[]>([])
 const credForm = ref({ app_id: '', public_key: '', private_key: '' })
 const credFile = ref<File | null>(null)
 const credSaving = ref(false)
+
+const router = useRouter()
+const demoTestEnabled = ref(false)
+const testingPid = ref<number | null>(null)
+
+async function loadDemoStatus() {
+  try {
+    const { data } = await api.get('/v1/admin/auth/demo-status')
+    demoTestEnabled.value = data.demo_mode === true && data.ip_allowed === true
+  } catch {
+    demoTestEnabled.value = false
+  }
+}
+
+async function testPayment(merchant: Merchant) {
+  if (!demoTestEnabled.value || !merchant.active || testingPid.value !== null) return
+  try {
+    await ElMessageBox.confirm('创建一笔 0.01 元的测试订单，实际应付金额以支付页面为准。此功能不会模拟支付成功，扫码付款会真实扣款。', '测试下单')
+  } catch {
+    return
+  }
+  testingPid.value = merchant.pid
+  try {
+    const { data } = await api.post(`/v1/admin/merchants/${merchant.pid}/test-payment`)
+    if (data.code !== 1) {
+      ElMessage.error(data.msg || '创建测试订单失败')
+      return
+    }
+    const { data: order } = await api.post('/xpay/epay/mapi.php', new URLSearchParams(data.params), {
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    })
+    if (order.code === 1) {
+      ElMessage.success('测试订单已创建')
+      await router.push(`/pay/${encodeURIComponent(order.trade_no)}`)
+    } else {
+      ElMessage.error(order.msg || '请先配置商户收款码和凭证')
+    }
+  } catch (error: any) {
+    ElMessage.error(error.response?.data?.detail || '测试下单失败，请检查凭证配置或网络连接')
+  } finally {
+    testingPid.value = null
+  }
+}
 
 async function loadMerchants() {
   try {
@@ -310,7 +357,10 @@ async function deleteCred(credId: number) {
   }
 }
 
-onMounted(loadMerchants)
+onMounted(() => {
+  loadDemoStatus()
+  loadMerchants()
+})
 </script>
 
 <style scoped>
