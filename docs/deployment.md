@@ -18,6 +18,8 @@ docker image inspect --format '{{.Id}} {{json .RepoDigests}} {{json .Config.Labe
 ### 发布及回滚原则
 1. 先测试候选不可变镜像，不挂载生产 data/env（下方 smoke 命令）。
 2. 使用 SQLite backup API 做一致性备份并 `PRAGMA integrity_check`，不是直接拷贝运行中的 `.db`。
+   以 URI `mode=ro` 打开源库；WAL 模式可能需要创建 SHM/WAL sidecar，因此源目录需可写。
+   不用 `immutable=1` 绕过锁和 WAL，不将只读挂载失败误判为备份成功。
 3. 备份 compose、env（0600）、上传文件和旧镜像 ID；备份存放在部署目录之外的受控路径。
 4. 本补丁无 schema 迁移；替换镜像，保留数据卷，等待健康检查并核对运行 digest。
 5. 默认故障回滚只切回旧镜像，**保留当前数据库**，避免覆盖发布后新增订单。
@@ -47,7 +49,7 @@ docker run --rm --network none -v "$PWD/scripts/smoke_issue14.py:/smoke.py:ro" \
 | demo Environment secret | DEMO_SSH_KEY | 专用 SSH 私钥，不复用生产密钥 |
 | demo Environment secret | DEMO_KNOWN_HOSTS | 带外确认的 SSH 主机公钥记录，不关闭主机校验 |
 
-服务器需 Linux、bash、flock、Docker 和 Compose v2（支持 --wait）。
+服务器需 Linux x86_64、bash、flock、Docker 和 Compose v2（支持 --wait）。
 GHCR 包若为 private，服务器需要预先 `docker login ghcr.io` 的 read:packages 凭证；不要上传个人 token 到仓库。
 创建包后核实可见性；公开仓库并不保证包默认公开。
 

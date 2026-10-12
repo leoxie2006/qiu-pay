@@ -30,9 +30,10 @@ docker pull "$image"
 # Candidate verification mounts neither live data nor live configuration.
 docker run --rm --network none -v "$here/scripts/smoke_issue14.py:/smoke.py:ro" \
   -e PYTHONPATH=/app "$image" python /smoke.py | tee "$backup/candidate-verification.txt"
-# SQLite online backup is WAL-consistent; only this separate backup container reads demo DB.
+# SQLite URI mode=ro prevents order writes. The directory must be writable
+# so SQLite can create WAL/SHM sidecars when no other connection is open.
 if [[ -f data/qiupay.db ]]; then
-  docker run --rm --network none -v "$root/data:/source:ro" -v "$backup:/backup" "$image" \
+  docker run --rm --network none -v "$root/data:/source" -v "$backup:/backup" "$image" \
     python -c "import sqlite3; a=sqlite3.connect('file:/source/qiupay.db?mode=ro',uri=True); b=sqlite3.connect('/backup/qiupay.db'); a.backup(b); assert b.execute('PRAGMA integrity_check').fetchone()[0]=='ok'; b.close(); a.close()"
 fi
 tar -czf "$backup/uploads.tar.gz" -C "$root" uploads

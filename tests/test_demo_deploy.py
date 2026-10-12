@@ -56,7 +56,7 @@ elif args[:2]==['image','inspect']:
 elif args[0]=='run':
     assert '--network' in args and args[args.index('--network')+1]=='none'
     mounts=[args[i+1] for i,v in enumerate(args) if v=='-v']
-    if any('/source:ro' in v for v in mounts):
+    if any(v.endswith(':/source') for v in mounts):
         dest=Path(next(v.rsplit(':/backup',1)[0] for v in mounts if v.endswith(':/backup')))
         src=sqlite3.connect(root/'data/qiupay.db'); dst=sqlite3.connect(dest/'qiupay.db')
         src.backup(dst); dst.close(); src.close()
