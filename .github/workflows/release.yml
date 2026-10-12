@@ -46,6 +46,12 @@ jobs:
           gh api --paginate --slurp "repos/$GITHUB_REPOSITORY/releases" > /tmp/releases.json
           existing=$(jq --arg tag "$TAG" 'any(.[][]; .tag_name == $tag)' /tmp/releases.json)
           echo "exists=$existing" >> "$GITHUB_OUTPUT"
+      - name: Require user-facing release notes
+        if: steps.existing.outputs.exists != 'true'
+        env:
+          TAG: ${{ steps.version.outputs.tag }}
+        run: |
+          test -s "docs/releases/$TAG.md" || { echo "Missing docs/releases/$TAG.md" >&2; exit 1; }
       - uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9 # v3
         if: steps.existing.outputs.exists != 'true'
         with:
@@ -83,11 +89,7 @@ jobs:
         run: |
           set -Eeuo pipefail
           notes="docs/releases/$TAG.md"
-          if [[ -f "$notes" ]]; then
-            cp "$notes" /tmp/release-notes.md
-          else
-            gh api --method POST "repos/$GITHUB_REPOSITORY/releases/generate-notes" -f tag_name="$TAG" -f target_commitish="$SHA" --jq .body > /tmp/release-notes.md
-          fi
-          printf '\n## GHCR 镜像\n- Commit: `%s`\n- 不可变引用: `%s`\n- 本流程只发布，不部署生产或远端 demo。\n' "$SHA" "$IMAGE_REF" >> /tmp/release-notes.md
+          cp "$notes" /tmp/release-notes.md
+          printf '\n如需固定镜像版本，可使用以下不可变镜像地址：\n```text\n%s\n```\n' "$IMAGE_REF" >> /tmp/release-notes.md
           jq -n --arg tag "$TAG" --arg sha "$SHA" --arg image "$IMAGE_REF" '{version:$tag,commit:$sha,image:$image,platform:"linux/amd64"}' > /tmp/release-manifest.json
           gh release create "$TAG" /tmp/release-manifest.json --verify-tag --title "Qiu-Pay $TAG" --notes-file /tmp/release-notes.md
