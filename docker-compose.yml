@@ -7,5 +7,11 @@ services:
       - "${BACKEND_PORT:-8000}:${BACKEND_PORT:-8000}"
     volumes:
       - ./data:/app/data
+      - type: bind
+        source: ${HOST_TIMEZONE_FILE:-/etc/localtime}
+        target: /etc/localtime
+        read_only: true
+        bind:
+          create_host_path: false
     env_file:
       - .env

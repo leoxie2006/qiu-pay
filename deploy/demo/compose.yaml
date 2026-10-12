@@ -8,6 +8,12 @@ services:
     volumes:
       - ./data:/app/data
       - ./uploads:/app/app/static/uploads
+      - type: bind
+        source: ${HOST_TIMEZONE_FILE:-/etc/localtime}
+        target: /etc/localtime
+        read_only: true
+        bind:
+          create_host_path: false
     env_file: .env.demo
     environment:
       BACKEND_HOST: 0.0.0.0

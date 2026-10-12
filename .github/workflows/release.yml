@@ -1,0 +1,93 @@
+name: Publish tagged Release
+on:
+  push:
+    tags: ['v*.*.*']
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Existing stable version tag to publish or retry
+        required: true
+        type: string
+permissions:
+  contents: read
+concurrency:
+  group: release-${{ inputs.tag || github.ref_name }}
+  cancel-in-progress: false
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+      packages: write
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          fetch-depth: 0
+      - name: Validate main ancestry and stable version
+        id: version
+        env:
+          TAG: ${{ inputs.tag || github.ref_name }}
+        run: |
+          git fetch origin main
+          # Inline validation works even when retrying tags predating this script.
+          [[ "$TAG" =~ ^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]]
+          sha=$(git rev-parse "refs/tags/$TAG^{commit}")
+          git merge-base --is-ancestor "$sha" origin/main
+          git checkout --detach "$sha"
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+          echo "sha=$sha" >> "$GITHUB_OUTPUT"
+      - name: Preserve existing Releases
+        id: existing
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ steps.version.outputs.tag }}
+        run: |
+          gh api --paginate --slurp "repos/$GITHUB_REPOSITORY/releases" > /tmp/releases.json
+          existing=$(jq --arg tag "$TAG" 'any(.[][]; .tag_name == $tag)' /tmp/releases.json)
+          echo "exists=$existing" >> "$GITHUB_OUTPUT"
+      - uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9 # v3
+        if: steps.existing.outputs.exists != 'true'
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Reuse verified main image and verify immutable digest
+        id: image
+        if: steps.existing.outputs.exists != 'true'
+        env:
+          REPOSITORY: ${{ github.repository }}
+          SHA: ${{ steps.version.outputs.sha }}
+          TAG: ${{ steps.version.outputs.tag }}
+        run: |
+          set -Eeuo pipefail
+          image="ghcr.io/${REPOSITORY,,}"
+          # A tag does not bypass main CI: image only exists after main checks succeed.
+          docker pull "$image:sha-$SHA"
+          [[ "$(docker image inspect --format '{{index .Config.Labels "org.opencontainers.image.revision"}}' "$image:sha-$SHA")" == "$SHA" ]]
+          ref=$(docker image inspect --format '{{index .RepoDigests 0}}' "$image:sha-$SHA")
+          [[ "$ref" =~ ^ghcr\.io/.+@sha256:[a-f0-9]{64}$ ]]
+          docker run --rm --network none -v "$PWD/scripts/smoke_issue14.py:/smoke.py:ro" -e PYTHONPATH=/app "$ref" python /smoke.py
+          docker tag "$ref" "$image:$TAG"
+          docker push "$image:$TAG"
+          version_ref=$(docker image inspect --format '{{index .RepoDigests 0}}' "$image:$TAG")
+          [[ "$version_ref" == "$ref" ]]
+          echo "ref=$ref" >> "$GITHUB_OUTPUT"
+      - name: Create Release with notes and image digest
+        if: steps.existing.outputs.exists != 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ steps.version.outputs.tag }}
+          SHA: ${{ steps.version.outputs.sha }}
+          IMAGE_REF: ${{ steps.image.outputs.ref }}
+        run: |
+          set -Eeuo pipefail
+          notes="docs/releases/$TAG.md"
+          if [[ -f "$notes" ]]; then
+            cp "$notes" /tmp/release-notes.md
+          else
+            gh api --method POST "repos/$GITHUB_REPOSITORY/releases/generate-notes" -f tag_name="$TAG" -f target_commitish="$SHA" --jq .body > /tmp/release-notes.md
+          fi
+          printf '\n## GHCR 镜像\n- Commit: `%s`\n- 不可变引用: `%s`\n- 本流程只发布，不部署生产或远端 demo。\n' "$SHA" "$IMAGE_REF" >> /tmp/release-notes.md
+          jq -n --arg tag "$TAG" --arg sha "$SHA" --arg image "$IMAGE_REF" '{version:$tag,commit:$sha,image:$image,platform:"linux/amd64"}' > /tmp/release-manifest.json
+          gh release create "$TAG" /tmp/release-manifest.json --verify-tag --title "Qiu-Pay $TAG" --notes-file /tmp/release-notes.md
