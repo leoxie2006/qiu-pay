@@ -34,7 +34,7 @@ jobs:
         run: PYTHONPATH=. python scripts/smoke_issue14.py
       - run: npm ci --prefix frontend && npm run build --prefix frontend
       - name: Deployment script syntax
-        run: bash -n scripts/deploy/demo.sh scripts/deploy/rollback-demo.sh
+        run: bash -n scripts/deploy/demo.sh scripts/deploy/rollback-demo.sh scripts/release/validate-tag.sh
   image:
     needs: checks
     runs-on: ubuntu-latest

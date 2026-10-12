@@ -105,13 +105,19 @@ BACKEND_PORT=8000
 ```yaml
 services:
   qiupay:
-    image: qiusheng26/qiu-pay:latest
+    image: ${QIUPAY_IMAGE:-ghcr.io/leoxie2006/qiu-pay:v1.1.3}
     container_name: qiupay
     restart: unless-stopped
     ports:
       - "${BACKEND_PORT:-8000}:${BACKEND_PORT:-8000}"
     volumes:
       - ./data:/app/data
+      - type: bind
+        source: ${HOST_TIMEZONE_FILE:-/etc/localtime}
+        target: /etc/localtime
+        read_only: true
+        bind:
+          create_host_path: false
     env_file:
       - .env
 ```
@@ -123,6 +129,10 @@ docker compose up -d
 ```
 
 5. 访问 `http://你的服务器IP:8000` 进入管理后台。
+
+容器默认只读挂载主机 `/etc/localtime`，跟随主机时区，不硬编码 `Asia/Shanghai`。
+如该路径不存在，用 `HOST_TIMEZONE_FILE` 指向主机有效的时区文件；不要设置会覆盖此挂载的 `TZ`。
+详见 [时区说明](docs/docker-timezone.md)。
 
 ## 🔧 开发部署
 

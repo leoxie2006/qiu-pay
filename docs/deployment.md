@@ -82,3 +82,12 @@ bash scripts/deploy/rollback-demo.sh /opt/qiu-pay-demo /opt/qiu-pay-demo/release
 脚本锁定部署、拒绝无 marker 的目录、先隔离验证、在线备份 SQLite、保存上传文件和旧镜像、按 digest 部署。
 健康检查或镜像验证失败自动回退；首次发布失败下线 demo。没有旧镜像时不伪造回滚成功。
 备份包含敏感配置/数据，需要权限限制和外部备份/保留策略；不要提交到 Git。
+
+## Tag 自动 Release（本节需新 PR 合并后生效）
+- main CI 成功后，先为 main 上目标 commit 创建稳定版本 tag `vMAJOR.MINOR.PATCH`，再 `git push origin TAG`。
+- `.github/workflows/release.yml` 校验 tag 名及 main 归属，复用该 commit 已通过 CI 的 GHCR `sha-<commit>` 镜像，不重复构建浮动依赖。
+- 拉取并检查 revision 标签，按 digest 运行临时数据库三状态验证，再发布 GHCR 版本 tag 和 GitHub Release。
+- 优先使用 `docs/releases/TAG.md`，缺省生成 GitHub 更新说明；追加 commit/digest，并上传 release-manifest.json。
+- Release 已存在则保留，不覆盖历史说明。tag 早于 main 镜像就绪时会失败，等待 main CI 完成后可用 workflow_dispatch 指定 tag 重试。
+- 此流程无部署 job，不重启生产或远端demo，也不修改任何订单库。
+- v1.1.2 本次先对现有 main 手动补发；本 PR 尚未合并的时区/自动Release改动不算入 v1.1.2。

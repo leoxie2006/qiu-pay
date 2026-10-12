@@ -10,9 +10,9 @@ RUN npm run build
 # ── Stage 2: 运行后端 ─────────────────────────────────────
 FROM python:3.12-slim
 
-# 安装 pyzbar 依赖的系统库（zbar）
+# 安装二维码依赖及可选 TZ 时区数据库；默认时区由主机 /etc/localtime 挂载决定。
 RUN apt-get update && \
-    apt-get install -y --no-install-recommends libzbar0 && \
+    DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends libzbar0 tzdata && \
     rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
