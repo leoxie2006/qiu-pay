@@ -107,12 +107,19 @@ function startPolling() {
       if (res.data.code === 1) {
         status.value = res.data.status
         if (res.data.status !== 0) {
-          stopPolling()
-          if (res.data.status === 1 && data.value?.return_url) {
-            setTimeout(() => {
-              window.location.href = data.value!.return_url
-            }, 3000)
+          if (res.data.status === 1) {
+            // The success URL is only issued after payment; refresh it now.
+            const paid = await publicApi.get(`/v1/pay/${tradeNo}`)
+            if (paid.data.code !== 1 || paid.data.order.status !== 1) return
+            data.value = paid.data
+            const returnUrl = paid.data.return_url
+            if (returnUrl) {
+              setTimeout(() => {
+                window.location.href = returnUrl
+              }, 3000)
+            }
           }
+          stopPolling()
         }
       }
     } catch {

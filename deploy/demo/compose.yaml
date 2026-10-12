@@ -1,0 +1,21 @@
+name: qiu-pay-demo
+services:
+  demo:
+    image: ${DEMO_IMAGE:?immutable DEMO_IMAGE required}
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:${DEMO_PORT:-18001}:8000"
+    volumes:
+      - ./data:/app/data
+      - ./uploads:/app/app/static/uploads
+    env_file: .env.demo
+    environment:
+      BACKEND_HOST: 0.0.0.0
+      BACKEND_PORT: "8000"
+      DB_PATH: /app/data/qiupay.db
+      TESTING: "1" # Demo only: disable payment/expiry/callback background tasks.
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/', timeout=3)"]
+      interval: 10s
+      timeout: 5s
+      retries: 6

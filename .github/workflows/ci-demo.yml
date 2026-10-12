@@ -1,0 +1,120 @@
+name: CI and demo delivery
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: ci-demo-${{ github.ref }}
+  cancel-in-progress: false
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
+        with:
+          python-version: '3.12'
+          cache: pip
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: '20'
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - run: sudo apt-get update && sudo apt-get install -y libzbar0
+      - run: pip install -r requirements.txt
+      - name: Backend regression
+        env:
+          TESTING: '1'
+        run: python -m pytest -q tests
+      - name: Isolated payment-state verification
+        run: PYTHONPATH=. python scripts/smoke_issue14.py
+      - run: npm ci --prefix frontend && npm run build --prefix frontend
+      - name: Deployment script syntax
+        run: bash -n scripts/deploy/demo.sh scripts/deploy/rollback-demo.sh
+  image:
+    needs: checks
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+      packages: write
+    outputs:
+      ref: ${{ steps.publish.outputs.ref }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3
+      - name: Image name
+        id: name
+        env:
+          REPOSITORY: ${{ github.repository }}
+        run: echo "tag=ghcr.io/${REPOSITORY,,}:sha-${GITHUB_SHA}" >> "$GITHUB_OUTPUT"
+      - uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6
+        with:
+          context: .
+          load: true
+          push: false
+          tags: ${{ steps.name.outputs.tag }}
+          labels: org.opencontainers.image.revision=${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+      - name: Verify actual container image without live data
+        env:
+          IMAGE: ${{ steps.name.outputs.tag }}
+        run: >-
+          docker run --rm --network none
+          -v "$PWD/scripts/smoke_issue14.py:/smoke.py:ro"
+          -e PYTHONPATH=/app "$IMAGE" python /smoke.py
+      - uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9 # v3
+        if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Publish immutable revision
+        id: publish
+        if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+        env:
+          IMAGE: ${{ steps.name.outputs.tag }}
+        run: |
+          docker push "$IMAGE"
+          ref=$(docker image inspect --format '{{index .RepoDigests 0}}' "$IMAGE")
+          [[ "$ref" =~ ^ghcr\.io/.+@sha256:[a-f0-9]{64}$ ]]
+          echo "ref=$ref" >> "$GITHUB_OUTPUT"
+  deploy-demo:
+    needs: image
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main' && vars.DEMO_DEPLOY_ENABLED == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment: demo
+    concurrency:
+      group: qiu-pay-demo-deploy
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - name: Deliver to dedicated demo host
+        env:
+          DEMO_HOST: ${{ vars.DEMO_HOST }}
+          DEMO_USER: ${{ vars.DEMO_USER }}
+          DEMO_DIR: ${{ vars.DEMO_DIR }}
+          SSH_KEY: ${{ secrets.DEMO_SSH_KEY }}
+          KNOWN_HOSTS: ${{ secrets.DEMO_KNOWN_HOSTS }}
+          IMAGE: ${{ needs.image.outputs.ref }}
+        run: |
+          set -Eeuo pipefail
+          [[ "$DEMO_HOST" =~ ^[a-zA-Z0-9.-]+$ && "$DEMO_USER" =~ ^[a-zA-Z0-9_-]+$ ]]
+          [[ "$DEMO_DIR" =~ ^/[a-zA-Z0-9_/-]+$ && "$DEMO_DIR" != / ]]
+          [[ -n "$SSH_KEY" && -n "$KNOWN_HOSTS" ]]
+          mkdir -p ~/.ssh; chmod 700 ~/.ssh
+          printf '%s\n' "$SSH_KEY" > ~/.ssh/demo_key; chmod 600 ~/.ssh/demo_key
+          printf '%s\n' "$KNOWN_HOSTS" > ~/.ssh/known_hosts; chmod 600 ~/.ssh/known_hosts
+          trap 'rm -f ~/.ssh/demo_key' EXIT
+          remote="$DEMO_USER@$DEMO_HOST"
+          ssh_opts=(-i ~/.ssh/demo_key -o BatchMode=yes -o StrictHostKeyChecking=yes)
+          ssh "${ssh_opts[@]}" "$remote" "test -f '$DEMO_DIR/.qiu-pay-demo' && mkdir -p '$DEMO_DIR/incoming/$GITHUB_SHA'"
+          tar -czf /tmp/demo-release.tgz scripts/deploy scripts/smoke_issue14.py deploy/demo
+          scp "${ssh_opts[@]}" /tmp/demo-release.tgz "$remote:$DEMO_DIR/incoming/$GITHUB_SHA/release.tgz"
+          ssh "${ssh_opts[@]}" "$remote" "cd '$DEMO_DIR/incoming/$GITHUB_SHA' && tar -xzf release.tgz && bash scripts/deploy/demo.sh '$DEMO_DIR' '$IMAGE'"

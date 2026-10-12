@@ -31,7 +31,7 @@ class CallbackService:
         try:
             row = db.execute(
                 """SELECT o.id, o.trade_no, o.out_trade_no, o.merchant_id,
-                          o.type, o.name, o.money, o.param,
+                          o.type, o.name, o.money, o.param, o.status,
                           o.notify_url, o.return_url,
                           o.callback_status, o.callback_attempts,
                           m.key AS merchant_key, m.id AS pid
@@ -46,6 +46,8 @@ class CallbackService:
 
     def _build_notify_params(self, order: dict) -> dict:
         """构建回调通知参数（不含 sign 和 sign_type）。"""
+        if order.get("status") != 1:
+            raise ValueError("Success callbacks require a paid order")
         params = {
             "pid": order["pid"],
             "trade_no": order["trade_no"],
@@ -122,6 +124,10 @@ class CallbackService:
         order = self._get_order_with_merchant(order_id)
         if not order:
             logger.warning("回调通知失败：订单不存在 (order_id=%d)", order_id)
+            return False
+
+        if order["status"] != 1:
+            logger.warning("跳过非已支付订单的通知 (order_id=%d)", order_id)
             return False
 
         notify_url = order.get("notify_url")
@@ -210,6 +216,10 @@ class CallbackService:
             )
             return
 
+        if order["status"] != 1:
+            logger.warning("跳过非已支付订单的重试 (order_id=%d)", order_id)
+            return
+
         notify_url = order.get("notify_url")
         if not notify_url:
             return
@@ -274,7 +284,7 @@ class CallbackService:
             拼接了通知参数的完整 return_url，若无 return_url 则返回空字符串。
         """
         order = self._get_order_with_merchant(order_id)
-        if not order:
+        if not order or order["status"] != 1:
             return ""
 
         return_url = order.get("return_url")
