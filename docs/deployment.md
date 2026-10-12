@@ -19,6 +19,7 @@ docker image inspect --format '{{.Id}} {{json .RepoDigests}} {{json .Config.Labe
 1. 先测试候选不可变镜像，不挂载生产 data/env（下方 smoke 命令）。
 2. 使用 SQLite backup API 做一致性备份并 `PRAGMA integrity_check`，不是直接拷贝运行中的 `.db`。
    以 URI `mode=ro` 打开源库；WAL 模式可能需要创建 SHM/WAL sidecar，因此源目录需可写。
+   备份目标转换为 `journal_mode=DELETE`，确保是无 sidecar 依赖的独立文件。
    不用 `immutable=1` 绕过锁和 WAL，不将只读挂载失败误判为备份成功。
 3. 备份 compose、env（0600）、上传文件和旧镜像 ID；备份存放在部署目录之外的受控路径。
 4. 本补丁无 schema 迁移；替换镜像，保留数据卷，等待健康检查并核对运行 digest。

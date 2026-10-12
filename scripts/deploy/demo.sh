@@ -34,7 +34,7 @@ docker run --rm --network none -v "$here/scripts/smoke_issue14.py:/smoke.py:ro" 
 # so SQLite can create WAL/SHM sidecars when no other connection is open.
 if [[ -f data/qiupay.db ]]; then
   docker run --rm --network none -v "$root/data:/source" -v "$backup:/backup" "$image" \
-    python -c "import sqlite3; a=sqlite3.connect('file:/source/qiupay.db?mode=ro',uri=True); b=sqlite3.connect('/backup/qiupay.db'); a.backup(b); assert b.execute('PRAGMA integrity_check').fetchone()[0]=='ok'; b.close(); a.close()"
+    python -c "import sqlite3; a=sqlite3.connect('file:/source/qiupay.db?mode=ro',uri=True); b=sqlite3.connect('/backup/qiupay.db'); a.backup(b); b.execute('PRAGMA journal_mode=DELETE'); assert b.execute('PRAGMA integrity_check').fetchone()[0]=='ok'; b.close(); a.close()"
 fi
 tar -czf "$backup/uploads.tar.gz" -C "$root" uploads
 rollback() {

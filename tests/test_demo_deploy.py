@@ -36,6 +36,7 @@ def demo(tmp_path):
     (root / '.image.env').write_text('DEMO_IMAGE=sha256:' + 'b' * 64 + '\n')
     (root / 'data').mkdir(); (root / 'uploads').mkdir()
     with sqlite3.connect(root / 'data/qiupay.db') as db:
+        db.execute('PRAGMA journal_mode=WAL')
         db.execute('CREATE TABLE test_orders(id INTEGER)')
         db.execute('INSERT INTO test_orders VALUES(42)')
     commands = tmp_path / 'bin'; commands.mkdir()
@@ -59,7 +60,7 @@ elif args[0]=='run':
     if any(v.endswith(':/source') for v in mounts):
         dest=Path(next(v.rsplit(':/backup',1)[0] for v in mounts if v.endswith(':/backup')))
         src=sqlite3.connect(root/'data/qiupay.db'); dst=sqlite3.connect(dest/'qiupay.db')
-        src.backup(dst); dst.close(); src.close()
+        src.backup(dst); dst.execute('PRAGMA journal_mode=DELETE'); dst.close(); src.close()
     else:
         assert all('/data' not in v and '.env' not in v for v in mounts)
         print('MOCK_IMAGE_VERIFICATION_PASS')
@@ -80,6 +81,7 @@ def test_demo_rollout_and_failure_rollback_preserve_db(demo, failed):
     release = next((root / 'releases').iterdir())
     with sqlite3.connect(release / 'qiupay.db') as db:
         assert db.execute('PRAGMA integrity_check').fetchone()[0] == 'ok'
+        assert db.execute('PRAGMA journal_mode').fetchone()[0] == 'delete'
         assert db.execute('SELECT id FROM test_orders').fetchall() == [(42,)]
     assert (release / 'uploads.tar.gz').exists()
     if failed:
