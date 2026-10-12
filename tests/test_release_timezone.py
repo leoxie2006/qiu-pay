@@ -32,7 +32,10 @@ def test_compose_mounts_host_timezone_file_readonly(tmp_path, file, service, env
                   if v.get('target') == '/etc/localtime')
     assert volume['source'] == ('/fixture/timezone-file' if custom else '/etc/localtime')
     assert volume['type'] == 'bind' and volume['read_only'] is True
-    assert volume['bind']['create_host_path'] is False
+    # Compose versions may omit false-valued JSON fields (omitempty).
+    # Keep the source-level requirement explicit; reject a rendered true value.
+    assert 'create_host_path: false' in (ROOT / file).read_text()
+    assert (volume.get('bind') or {}).get('create_host_path', False) is False
     assert 'TZ' not in config['services'][service].get('environment', {})
 
 
