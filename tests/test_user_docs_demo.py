@@ -139,5 +139,6 @@ def test_release_uses_user_notes_without_internal_status():
     for version in ['v1.1.2','v1.1.3']:
         body = (ROOT / f'docs/releases/{version}.md').read_text()
         assert '## 安装与更新' in body
-        assert 'docker compose pull' in body
+        assert 'https://github.com/leoxie2006/qiu-pay#-docker-部署推荐' in body
+        assert 'ghcr.io/leoxie2006/qiu-pay:latest' in body
         assert '实证' not in body and 'CI 后端' not in body and '远端 demo' not in body

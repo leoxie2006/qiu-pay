@@ -90,6 +90,5 @@ jobs:
           set -Eeuo pipefail
           notes="docs/releases/$TAG.md"
           cp "$notes" /tmp/release-notes.md
-          printf '\n如需固定镜像版本，可使用以下不可变镜像地址：\n```text\n%s\n```\n' "$IMAGE_REF" >> /tmp/release-notes.md
           jq -n --arg tag "$TAG" --arg sha "$SHA" --arg image "$IMAGE_REF" '{version:$tag,commit:$sha,image:$image,platform:"linux/amd64"}' > /tmp/release-manifest.json
           gh release create "$TAG" /tmp/release-manifest.json --verify-tag --title "Qiu-Pay $TAG" --notes-file /tmp/release-notes.md

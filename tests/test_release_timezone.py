@@ -30,7 +30,7 @@ def test_compose_mounts_host_timezone_file_readonly(tmp_path, file, service, env
                             capture_output=True, text=True, check=True)
     config = json.loads(result.stdout)
     if service == 'qiu-pay':
-        assert config['services'][service]['image'] == 'ghcr.io/leoxie2006/qiu-pay:v1.1.3'
+        assert config['services'][service]['image'] == 'ghcr.io/leoxie2006/qiu-pay:latest'
     volume = next(v for v in config['services'][service]['volumes']
                   if v.get('target') == '/etc/localtime')
     assert volume['source'] == ('/fixture/timezone-file' if custom else '/etc/localtime')
